@@ -5,13 +5,17 @@ import com.aives.common.exception.ErrorCode;
 import com.aives.common.security.JwtTokenProvider;
 import com.aives.common.security.TokenBlacklist;
 import com.aives.common.security.UserPrincipal;
+import com.aives.modules.auth.dto.CreateUserRequest;
 import com.aives.modules.auth.dto.LoginRequest;
 import com.aives.modules.auth.dto.LoginResponse;
+import com.aives.modules.auth.dto.RegisterRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.entity.User;
+import com.aives.modules.auth.enums.Role;
 import com.aives.modules.auth.mapper.UserMapper;
 import com.aives.modules.auth.repository.UserRepository;
 import com.aives.modules.auth.service.AuthService;
+import com.aives.modules.auth.service.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -24,10 +28,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklist tokenBlacklist;
     private final UserMapper userMapper;
+
+    @Override
+    @Transactional
+    public UserResponse register(RegisterRequest request) {
+        // Tu dang ky thi luon la STUDENT, khong cho client chon role
+        CreateUserRequest createRequest = new CreateUserRequest(
+                request.getEmail(),
+                request.getPassword(),
+                request.getFullName(),
+                Role.STUDENT,
+                request.getStudentCode());
+        return userService.createUser(createRequest);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -67,13 +85,5 @@ public class AuthServiceImpl implements AuthService {
         } catch (JwtException | IllegalArgumentException ex) {
             // Token da sai / het han san thi khong can lam gi
         }
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public UserResponse getCurrentUser(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        return userMapper.toResponse(user);
     }
 }

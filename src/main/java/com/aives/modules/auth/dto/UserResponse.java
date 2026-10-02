@@ -15,7 +15,7 @@ import lombok.Setter;
 @Builder
 public class UserResponse {
 
-    private Long id;
+    private String id;
     private String email;
     private String fullName;
     private Role role;

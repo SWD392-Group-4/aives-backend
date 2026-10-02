@@ -17,7 +17,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CreateUserRequest {
 
-    @Schema(example = "student01@fpt.edu.vn")
+    @Schema(example = "lecturer03@fe.edu.vn")
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không đúng định dạng")
     @Size(max = 255, message = "Email tối đa 255 ký tự")
@@ -33,11 +33,11 @@ public class CreateUserRequest {
     @Size(max = 150, message = "Họ tên tối đa 150 ký tự")
     private String fullName;
 
-    @Schema(example = "STUDENT")
+    @Schema(example = "LECTURER")
     @NotNull(message = "Role không được để trống")
     private Role role;
 
-    @Schema(example = "SE180001", description = "Chỉ cần khi role = STUDENT")
+    @Schema(example = "", description = "Bắt buộc khi role = STUDENT, các role khác bỏ trống")
     @Size(max = 20, message = "Mã sinh viên tối đa 20 ký tự")
     private String studentCode;
 }

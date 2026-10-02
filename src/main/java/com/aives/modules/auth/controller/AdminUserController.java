@@ -32,25 +32,25 @@ public class AdminUserController {
 
     private final UserService userService;
 
-    @Operation(summary = "Danh sách tất cả user")
+    @Operation(summary = "Danh sách tất cả account")
     @GetMapping
     public ApiResponse<List<UserResponse>> getAllUsers() {
         return ApiResponse.ok(userService.getAllUsers());
     }
 
-    @Operation(summary = "Thêm user mới")
+    @Operation(summary = "Tạo account mới (ADMIN / LECTURER / STUDENT). Lecturer chỉ tạo được ở đây")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
-        return ApiResponse.ok("Tạo user thành công", userService.createUser(request));
+        return ApiResponse.ok("Tạo account thành công", userService.createUser(request));
     }
 
-    @Operation(summary = "Xoá user theo id")
+    @Operation(summary = "Xoá account theo id (vd: ST482913)")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteUser(
-            @PathVariable Long id,
+            @PathVariable String id,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
         userService.deleteUser(id, principal.getId());
-        return ApiResponse.ok("Xoá user thành công", null);
+        return ApiResponse.ok("Xoá account thành công", null);
     }
 }

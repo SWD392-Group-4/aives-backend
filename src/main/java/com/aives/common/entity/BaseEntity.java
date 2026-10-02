@@ -2,8 +2,6 @@ package com.aives.common.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import java.time.LocalDateTime;
@@ -13,6 +11,9 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+/**
+ * id la chuoi (NVARCHAR(20)) do code tu sinh, khong dung IDENTITY cua DB.
+ */
 @Getter
 @Setter
 @MappedSuperclass
@@ -20,8 +21,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 public abstract class BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id", nullable = false, updatable = false, length = 20)
+    private String id;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

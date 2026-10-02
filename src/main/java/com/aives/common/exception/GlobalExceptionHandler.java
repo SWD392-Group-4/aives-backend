@@ -4,6 +4,7 @@ import com.aives.common.dto.ApiResponse;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -40,6 +41,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(ErrorCode.BAD_REQUEST.getStatus())
                 .body(ApiResponse.error(ErrorCode.BAD_REQUEST, "Body JSON không đúng định dạng"));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(ErrorCode.DATA_CONFLICT.getStatus())
+                .body(ApiResponse.error(ErrorCode.DATA_CONFLICT));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
