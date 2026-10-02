@@ -18,3 +18,6 @@ target/
 application-local.yml
 application-local.properties
 *.log
+
+### Qodo plugin ###
+.qodo/

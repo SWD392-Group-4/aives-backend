@@ -1,13 +1,10 @@
 spring:
   application:
     name: aives-backend
-  datasource:
-    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=aives;encrypt=true;trustServerCertificate=true}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
+  profiles:
+    # dev = H2 in-memory (chua can SQL Server). Khi co DB: chay voi profile "sqlserver".
+    default: dev
   jpa:
-    hibernate:
-      ddl-auto: none
     open-in-view: false
     properties:
       hibernate:
@@ -15,3 +12,20 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+
+app:
+  jwt:
+    # Bat buoc >= 32 ky tu. Moi truong that phai dat bien moi truong JWT_SECRET.
+    secret: ${JWT_SECRET:aives-dev-only-secret-key-change-me-0123456789}
+    access-token-expiration-minutes: 60
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  seed:
+    admin:
+      email: ${ADMIN_EMAIL:admin@aives.local}
+      password: ${ADMIN_PASSWORD:Admin@123}
+      full-name: System Admin
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

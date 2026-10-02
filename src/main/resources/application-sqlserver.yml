@@ -1,0 +1,10 @@
+# Chay voi SQL Server: dat SPRING_PROFILES_ACTIVE=sqlserver (hoac Active profiles trong IntelliJ).
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=aives;encrypt=true;trustServerCertificate=true}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      # Tam thoi de Hibernate tu tao bang. Khi them Flyway thi doi thanh "validate".
+      ddl-auto: update
