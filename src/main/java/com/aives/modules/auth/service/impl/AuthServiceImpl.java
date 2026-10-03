@@ -37,13 +37,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        // Tu dang ky thi luon la STUDENT, khong cho client chon role
+        // Tu dang ky thi luon la STUDENT, khong cho client chon role.
+        // studentCode = null -> UserService tu sinh ma sinh vien ngau nhien.
         CreateUserRequest createRequest = new CreateUserRequest(
                 request.getEmail(),
                 request.getPassword(),
                 request.getFullName(),
                 Role.STUDENT,
-                request.getStudentCode());
+                null);
         return userService.createUser(createRequest);
     }
 

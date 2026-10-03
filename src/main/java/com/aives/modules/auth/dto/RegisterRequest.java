@@ -12,6 +12,7 @@ import lombok.Setter;
 /**
  * Tu dang ky tai khoan: chi tao duoc role STUDENT.
  * Lecturer phai do admin tao (POST /api/admin/users).
+ * Ma sinh vien khong nhap o day: he thong tu sinh ngau nhien (StudentCodeGenerator).
  */
 @Getter
 @Setter
@@ -34,9 +35,4 @@ public class RegisterRequest {
     @NotBlank(message = "Họ tên không được để trống")
     @Size(max = 150, message = "Họ tên tối đa 150 ký tự")
     private String fullName;
-
-    @Schema(example = "SE180008")
-    @NotBlank(message = "Mã sinh viên không được để trống")
-    @Size(max = 20, message = "Mã sinh viên tối đa 20 ký tự")
-    private String studentCode;
 }

@@ -3,6 +3,7 @@ package com.aives.modules.auth.controller;
 import com.aives.common.dto.ApiResponse;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.auth.dto.CreateUserRequest;
+import com.aives.modules.auth.dto.UpdateUserStatusRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -43,6 +45,17 @@ public class AdminUserController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         return ApiResponse.ok("Tạo account thành công", userService.createUser(request));
+    }
+
+    @Operation(summary = "Vô hiệu hoá / kích hoạt lại account theo id (active = false là vô hiệu hoá)")
+    @PutMapping("/{id}/status")
+    public ApiResponse<UserResponse> updateUserStatus(
+            @PathVariable String id,
+            @Valid @RequestBody UpdateUserStatusRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        boolean active = request.getActive();
+        UserResponse user = userService.updateUserStatus(id, active, principal.getId());
+        return ApiResponse.ok(active ? "Đã kích hoạt lại account" : "Đã vô hiệu hoá account", user);
     }
 
     @Operation(summary = "Xoá account theo id (vd: ST482913)")

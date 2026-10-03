@@ -18,5 +18,7 @@ public interface UserService {
 
     void changePassword(String userId, ChangePasswordRequest request);
 
+    UserResponse updateUserStatus(String userId, boolean active, String currentUserId);
+
     void deleteUser(String userId, String currentUserId);
 }

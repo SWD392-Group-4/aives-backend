@@ -37,7 +37,7 @@ public class CreateUserRequest {
     @NotNull(message = "Role không được để trống")
     private Role role;
 
-    @Schema(example = "", description = "Bắt buộc khi role = STUDENT, các role khác bỏ trống")
+    @Schema(example = "", description = "Chỉ dùng cho role = STUDENT. Bỏ trống thì hệ thống tự sinh mã ngẫu nhiên")
     @Size(max = 20, message = "Mã sinh viên tối đa 20 ký tự")
     private String studentCode;
 }

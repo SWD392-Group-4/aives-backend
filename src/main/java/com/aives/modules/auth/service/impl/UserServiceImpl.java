@@ -11,6 +11,7 @@ import com.aives.modules.auth.enums.Role;
 import com.aives.modules.auth.mapper.UserMapper;
 import com.aives.modules.auth.repository.UserRepository;
 import com.aives.modules.auth.service.UserService;
+import com.aives.modules.auth.util.StudentCodeGenerator;
 import com.aives.modules.auth.util.UserIdGenerator;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final UserIdGenerator userIdGenerator;
+    private final StudentCodeGenerator studentCodeGenerator;
 
     @Override
     @Transactional(readOnly = true)
@@ -54,15 +56,17 @@ public class UserServiceImpl implements UserService {
 
         Role role = request.getRole();
 
-        // Chi STUDENT moi co ma sinh vien; admin / lecturer luon de null
+        // Chi STUDENT moi co ma sinh vien; admin / lecturer luon de null.
+        // Khong gui ma thi he thong tu sinh ngau nhien (SE + 6 chu so).
         String studentCode = null;
         if (role == Role.STUDENT) {
-            if (!StringUtils.hasText(request.getStudentCode())) {
-                throw new BusinessException(ErrorCode.STUDENT_CODE_REQUIRED);
-            }
-            studentCode = request.getStudentCode().trim().toUpperCase();
-            if (userRepository.existsByStudentCode(studentCode)) {
-                throw new BusinessException(ErrorCode.STUDENT_CODE_ALREADY_EXISTS);
+            if (StringUtils.hasText(request.getStudentCode())) {
+                studentCode = request.getStudentCode().trim().toUpperCase();
+                if (userRepository.existsByStudentCode(studentCode)) {
+                    throw new BusinessException(ErrorCode.STUDENT_CODE_ALREADY_EXISTS);
+                }
+            } else {
+                studentCode = studentCodeGenerator.generate();
             }
         }
 
@@ -96,6 +100,18 @@ public class UserServiceImpl implements UserService {
         }
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse updateUserStatus(String userId, boolean active, String currentUserId) {
+        // Admin khong duoc tu khoa chinh minh, tranh truong hop khong con ai vao duoc he thong
+        if (!active && userId.equals(currentUserId)) {
+            throw new BusinessException(ErrorCode.CANNOT_DISABLE_SELF);
+        }
+        User user = findUser(userId);
+        user.setActive(active);
+        return userMapper.toResponse(userRepository.save(user));
     }
 
     @Override

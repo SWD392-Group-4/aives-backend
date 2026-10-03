@@ -10,6 +10,7 @@ public enum ErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "Dữ liệu gửi lên không hợp lệ"),
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "Yêu cầu không hợp lệ"),
     CANNOT_DELETE_SELF(HttpStatus.BAD_REQUEST, "Không thể tự xoá tài khoản đang đăng nhập"),
+    CANNOT_DISABLE_SELF(HttpStatus.BAD_REQUEST, "Không thể tự vô hiệu hoá tài khoản đang đăng nhập"),
     STUDENT_CODE_REQUIRED(HttpStatus.BAD_REQUEST, "Sinh viên bắt buộc phải có mã sinh viên"),
     WRONG_CURRENT_PASSWORD(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không đúng"),
 
