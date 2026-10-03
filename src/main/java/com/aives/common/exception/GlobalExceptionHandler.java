@@ -15,6 +15,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Slf4j
 @RestControllerAdvice
@@ -41,6 +42,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(ErrorCode.BAD_REQUEST.getStatus())
                 .body(ApiResponse.error(ErrorCode.BAD_REQUEST, "Body JSON không đúng định dạng"));
+    }
+
+    // Tham so tren URL sai kieu, vd: ?page=abc
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return ResponseEntity.status(ErrorCode.BAD_REQUEST.getStatus())
+                .body(ApiResponse.error(ErrorCode.BAD_REQUEST, "Tham số '" + ex.getName() + "' không hợp lệ"));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

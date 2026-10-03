@@ -13,7 +13,10 @@ import com.aives.modules.auth.repository.UserRepository;
 import com.aives.modules.auth.service.UserService;
 import com.aives.modules.auth.util.StudentCodeGenerator;
 import com.aives.modules.auth.util.UserIdGenerator;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +47,16 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public UserResponse getUserById(String userId) {
         return userMapper.toResponse(findUser(userId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, String> getFullNamesByIds(Collection<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, User::getFullName));
     }
 
     @Override
