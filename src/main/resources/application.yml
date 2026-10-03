@@ -2,9 +2,8 @@ spring:
   application:
     name: aives-backend
   profiles:
-    # sqlserver = database "aives" tren SQL Server (mac dinh).
-    # dev = H2 in-memory, dung khi may chua cai SQL Server (SPRING_PROFILES_ACTIVE=dev).
-    default: sqlserver
+    active: ${SPRING_PROFILES_ACTIVE:supabase}
+    default: supabase
   jpa:
     open-in-view: false
     properties:
