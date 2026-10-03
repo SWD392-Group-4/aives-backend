@@ -27,7 +27,7 @@ src/main/java/com/aives/
 ```
 
 ## Chạy local
-1. Tạo database `aives` trên SQL Server rồi chạy lần lượt `database/01_users.sql` và `database/02_viva_exams.sql` để tạo bảng (khoá chính của 2 bảng phiên thi là `viva_exams_id` và `viva_attempts_id`).
+1. Tạo database `aives` trên SQL Server rồi chạy lần lượt `database/01_users.sql` và `database/02_viva_exams.sql` để tạo bảng. Khoá chính đặt theo tên bảng: `users_id`, `viva_exams_id`, `viva_attempts_id`. Khoá ngoại mang đúng tên khoá chính mà nó trỏ tới (`viva_attempts.viva_exams_id`), trừ khoá ngoại đặt theo vai trò (`lecturer_id`, `student_id`). Database tạo theo các bản script cũ thì chạy tiếp theo thứ tự: `04_viva_exams_id_as_code.sql` (bỏ cột `exam_code`), `05_rename_viva_attempts_fk.sql` (đổi `viva_exam_id` thành `viva_exams_id`). Database đã có bảng `users` kiểu cũ (cột `id`, `student_code`) thì chạy `database/03_alter_users.sql` thay cho `01_users.sql`.
 2. Khai báo tài khoản DB trong `application-sqlserver.yml` (hoặc biến môi trường `DB_USERNAME`, `DB_PASSWORD`, `DB_URL`).
 3. Mở project bằng IntelliJ, chờ Maven tải dependency, chạy `AivesApplication`.
 4. Lần chạy đầu, `DataInitializer` tự tạo dữ liệu mẫu khi bảng `users` còn trống: 1 admin, 2 lecturer, 7 student
@@ -37,7 +37,7 @@ src/main/java/com/aives/
 Máy chưa cài SQL Server: chạy với profile `dev` (H2 in-memory) bằng biến môi trường `SPRING_PROFILES_ACTIVE=dev`.
 
 ## Quy tắc id của user
-`users.id` = 2 chữ cái theo role + 6 chữ số ngẫu nhiên, do `UserIdGenerator` sinh:
+`users.users_id` = 2 chữ cái theo role + 6 chữ số ngẫu nhiên, do `UserIdGenerator` sinh:
 `ADxxxxxx` (ADMIN), `LExxxxxx` (LECTURER), `STxxxxxx` (STUDENT).
 
 ## API hiện có
@@ -61,9 +61,10 @@ Máy chưa cài SQL Server: chạy với profile `dev` (H2 in-memory) bằng bi�
 | POST | `/api/exam-sessions/{id}/regenerate-passcode` | Người tạo phiên / ADMIN |
 | POST | `/api/exam-sessions/join` | STUDENT (nhập mã phiên + mã truy cập) |
 | GET | `/api/exam-sessions/attempts/{attemptId}` | STUDENT chủ lượt thi |
+| POST | `/api/exam-sessions/attempts/{attemptId}/finish` | STUDENT chủ lượt thi (kết thúc bài thi trước khi hết giờ) |
 
 ## Phiên thi (module `exam`)
-- **Mã phiên**: `AIVES_EXAM_yyyy_xxxxxx` (yyyy là năm tạo, 6 số ngẫu nhiên, không trùng). **Mã truy cập**: 6 chữ số, dùng chung cho cả phiên, người tạo xem lại và tạo lại được.
+- **Mã phiên** chính là khoá chính `viva_exams_id`: `AIVES_EXAM_yyyy_xxxxxx` (yyyy là năm tạo, 6 số ngẫu nhiên, không trùng); không có cột `exam_code` riêng. Sinh viên gửi mã này ở field `examId` khi vào thi. **Mã truy cập**: 6 chữ số, dùng chung cho cả phiên, người tạo xem lại và tạo lại được.
 - **Thời gian**: API nhận ISO-8601 có múi giờ (vd `2026-10-10T08:00:00+07:00`), DB lưu giờ UTC.
 - **Trạng thái** tính từ thời gian, không lưu cứng: `UPCOMING` → `ONGOING` → `ENDED`; chỉ `CANCELLED` được lưu (cột `cancelled_at`).
 - **Ràng buộc khi tạo**: giờ đóng sau giờ mở; giờ mở không ở quá khứ và không xa quá 365 ngày; mở tối đa 30 ngày; thời lượng 5–300 phút và không dài hơn khoảng mở.

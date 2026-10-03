@@ -117,8 +117,8 @@ class ExamSessionApiTest {
         create(LECTURER_1, body("  Vấn đáp giữa kỳ  ", start, start.plus(3, ChronoUnit.HOURS), 60))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id", matchesPattern("^EX\\d{6}$")))
-                .andExpect(jsonPath("$.data.examCode", matchesPattern("^AIVES_EXAM_2026_\\d{6}$")))
+                .andExpect(jsonPath("$.data.id", matchesPattern("^AIVES_EXAM_2026_\\d{6}$")))
+                .andExpect(jsonPath("$.data.examCode").doesNotExist())
                 .andExpect(jsonPath("$.data.passcode", matchesPattern("^\\d{6}$")))
                 .andExpect(jsonPath("$.data.title").value("Vấn đáp giữa kỳ"))
                 .andExpect(jsonPath("$.data.status").value("UPCOMING"))
@@ -233,7 +233,7 @@ class ExamSessionApiTest {
         mockMvc.perform(auth(get(SESSIONS + "/" + id), LECTURER_1)).andExpect(status().isOk());
         mockMvc.perform(auth(get(SESSIONS + "/" + id), ADMIN)).andExpect(status().isOk());
         // Khong ton tai
-        expectError(mockMvc.perform(auth(get(SESSIONS + "/EX000000"), ADMIN)), 404, "EXAM_SESSION_NOT_FOUND");
+        expectError(mockMvc.perform(auth(get(SESSIONS + "/AIVES_EXAM_2020_000000"), ADMIN)), 404, "EXAM_SESSION_NOT_FOUND");
 
         // Danh sach: GV2 khong thay phien cua GV1, admin thay
         mockMvc.perform(auth(get(SESSIONS).param("keyword", "Phiên của GV1"), LECTURER_2))
@@ -258,7 +258,7 @@ class ExamSessionApiTest {
                 .andExpect(jsonPath("$.data.title").value("Phiên đã sửa"))
                 .andExpect(jsonPath("$.data.durationMinutes").value(45))
                 .andExpect(jsonPath("$.data.startAt").value(newStart.toString()))
-                .andExpect(jsonPath("$.data.examCode").value(created.get("examCode").asText()));
+                .andExpect(jsonPath("$.data.id").value(created.get("id").asText()));
         expectError(mockMvc.perform(json(auth(put(url), LECTURER_1), body("Phiên", end, newStart, 45))),
                 400, "EXAM_TIME_RANGE_INVALID");
         expectError(mockMvc.perform(json(auth(put(url), LECTURER_1), body("Phiên", newStart, end, 200))),
@@ -295,7 +295,7 @@ class ExamSessionApiTest {
     void join_validatesCodeAndPasscode() throws Exception {
         Instant start = clock.instant().plus(1, ChronoUnit.HOURS);
         JsonNode session = createAndGet(LECTURER_1, body("Phiên", start, start.plus(2, ChronoUnit.HOURS), 60));
-        String code = session.get("examCode").asText();
+        String code = session.get("id").asText();
         String passcode = session.get("passcode").asText();
         String student = student(1);
 
@@ -320,6 +320,7 @@ class ExamSessionApiTest {
         join(student, "  " + code.toLowerCase() + " ", " " + passcode + " ")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.attemptId", matchesPattern("^AT\\d{8}$")))
+                .andExpect(jsonPath("$.data.examId").value(code))
                 .andExpect(jsonPath("$.data.status").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$.data.remainingSeconds").value(3600))
                 .andExpect(jsonPath("$.data.passcode").doesNotExist());
@@ -334,7 +335,7 @@ class ExamSessionApiTest {
         Instant start = clock.instant().plus(1, ChronoUnit.HOURS);
         Instant end = start.plus(2, ChronoUnit.HOURS);
         JsonNode session = createAndGet(LECTURER_1, body("Phiên", start, end, 60));
-        String code = session.get("examCode").asText();
+        String code = session.get("id").asText();
         String passcode = session.get("passcode").asText();
 
         // SV1 vao luc mo phien: du 60 phut
@@ -383,7 +384,7 @@ class ExamSessionApiTest {
     void join_locksAfterFiveWrongAttempts() throws Exception {
         Instant start = clock.instant().plus(1, ChronoUnit.HOURS);
         JsonNode session = createAndGet(LECTURER_1, body("Phiên", start, start.plus(2, ChronoUnit.HOURS), 60));
-        String code = session.get("examCode").asText();
+        String code = session.get("id").asText();
         String passcode = session.get("passcode").asText();
         String student = student(3);
         clock.set(start);
@@ -409,7 +410,7 @@ class ExamSessionApiTest {
         Instant start = clock.instant().plus(1, ChronoUnit.HOURS);
         JsonNode session = createAndGet(LECTURER_1, body("Phiên", start, start.plus(2, ChronoUnit.HOURS), 60));
         String url = SESSIONS + "/" + session.get("id").asText();
-        String code = session.get("examCode").asText();
+        String code = session.get("id").asText();
         String oldPasscode = session.get("passcode").asText();
         clock.set(start);
 
@@ -418,10 +419,58 @@ class ExamSessionApiTest {
                 .andExpect(jsonPath("$.data.passcode", matchesPattern("^\\d{6}$"))));
         String newPasscode = updated.get("passcode").asText();
         assertThat(newPasscode).isNotEqualTo(oldPasscode);
-        assertThat(updated.get("examCode").asText()).isEqualTo(code);
+        assertThat(updated.get("id").asText()).isEqualTo(code);
 
         expectError(join(student(5), code, oldPasscode), 400, "EXAM_JOIN_INVALID");
         join(student(5), code, newPasscode).andExpect(status().isOk());
+    }
+
+    @Test
+    void finish_endsAttemptEarlyAndBlocksRejoin() throws Exception {
+        Instant start = clock.instant().plus(1, ChronoUnit.HOURS);
+        JsonNode session = createAndGet(LECTURER_1, body("Phiên", start, start.plus(2, ChronoUnit.HOURS), 60));
+        String code = session.get("id").asText();
+        String passcode = session.get("passcode").asText();
+        clock.set(start);
+        String attemptId = data(join(student(2), code, passcode)).get("attemptId").asText();
+        String finishUrl = SESSIONS + "/attempts/" + attemptId + "/finish";
+
+        // Dang thi thi chua co completedAt
+        mockMvc.perform(auth(get(SESSIONS + "/attempts/" + attemptId), student(2)))
+                .andExpect(jsonPath("$.data.completedAt").doesNotExist());
+
+        // Nguoi khac / giang vien khong ket thuc ho duoc
+        expectError(mockMvc.perform(auth(post(finishUrl), student(1))), 404, "EXAM_ATTEMPT_NOT_FOUND");
+        expectError(mockMvc.perform(auth(post(finishUrl), LECTURER_1)), 403, "ACCESS_DENIED");
+
+        // Ket thuc sau 15 phut
+        clock.advance(Duration.ofMinutes(15));
+        Instant finishedAt = clock.instant();
+        mockMvc.perform(auth(post(finishUrl), student(2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.remainingSeconds").value(0))
+                .andExpect(jsonPath("$.data.completedAt").value(finishedAt.toString()));
+
+        // Goi lai: giu nguyen thoi diem ket thuc lan dau
+        clock.advance(Duration.ofMinutes(5));
+        mockMvc.perform(auth(post(finishUrl), student(2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.completedAt").value(finishedAt.toString()));
+        mockMvc.perform(auth(get(SESSIONS + "/attempts/" + attemptId), student(2)))
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.remainingSeconds").value(0));
+
+        // Da ket thuc thi khong vao lai duoc, du con thoi gian
+        expectError(join(student(2), code, passcode), 409, "EXAM_ATTEMPT_FINISHED");
+    }
+
+    @Test
+    void users_haveNoStudentCode() throws Exception {
+        mockMvc.perform(auth(get("/api/auth/me"), student(1)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", matchesPattern("^ST\\d{6}$")))
+                .andExpect(jsonPath("$.data.studentCode").doesNotExist());
     }
 
     /* ========================= XOA / HUY ========================= */
@@ -442,7 +491,7 @@ class ExamSessionApiTest {
         // Da co sinh vien va dang mo: chi huy
         JsonNode session = createAndGet(LECTURER_1, body("Phiên có SV", start, end, 60));
         String url = SESSIONS + "/" + session.get("id").asText();
-        String code = session.get("examCode").asText();
+        String code = session.get("id").asText();
         String passcode = session.get("passcode").asText();
         clock.set(start);
         String attemptId = data(join(student(6), code, passcode)).get("attemptId").asText();
@@ -467,7 +516,7 @@ class ExamSessionApiTest {
         Instant start2 = clock.instant().plus(1, ChronoUnit.HOURS);
         JsonNode ended = createAndGet(LECTURER_1, body("Phiên sẽ kết thúc", start2, start2.plus(1, ChronoUnit.HOURS), 30));
         clock.set(start2);
-        join(student(6), ended.get("examCode").asText(), ended.get("passcode").asText()).andExpect(status().isOk());
+        join(student(6), ended.get("id").asText(), ended.get("passcode").asText()).andExpect(status().isOk());
         clock.set(start2.plus(2, ChronoUnit.HOURS));
         expectError(mockMvc.perform(auth(delete(SESSIONS + "/" + ended.get("id").asText()), LECTURER_1)),
                 409, "EXAM_SESSION_HAS_ATTEMPTS");
@@ -501,7 +550,7 @@ class ExamSessionApiTest {
                 .andExpect(jsonPath("$.data.items", hasSize(0)));
 
         // Tim theo ma phien
-        mockMvc.perform(auth(get(SESSIONS).param("keyword", ongoing.get("examCode").asText().toLowerCase()), LECTURER_2))
+        mockMvc.perform(auth(get(SESSIONS).param("keyword", ongoing.get("id").asText().toLowerCase()), LECTURER_2))
                 .andExpect(jsonPath("$.data.items", hasSize(1)));
         // Ky tu % va _ duoc coi la chu thuong, khong phai ky tu dai dien
         mockMvc.perform(auth(get(SESSIONS).param("keyword", "%"), LECTURER_2))
@@ -570,7 +619,7 @@ class ExamSessionApiTest {
 
     private ResultActions join(String email, String examCode, String passcode) throws Exception {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("examCode", examCode);
+        body.put("examId", examCode);
         body.put("passcode", passcode);
         return mockMvc.perform(json(auth(post(SESSIONS + "/join"), email), body));
     }

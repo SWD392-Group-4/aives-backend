@@ -43,4 +43,12 @@ public class ExamAttemptController {
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
         return ApiResponse.ok(examAttemptService.getAttempt(attemptId, principal.getId()));
     }
+
+    @Operation(summary = "Kết thúc bài thi trước khi hết giờ. Sau đó không vào lại phiên này được nữa")
+    @PostMapping("/attempts/{attemptId}/finish")
+    public ApiResponse<ExamAttemptResponse> finishAttempt(
+            @PathVariable String attemptId,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok("Đã kết thúc bài thi", examAttemptService.finishAttempt(attemptId, principal.getId()));
+    }
 }

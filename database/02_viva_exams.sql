@@ -4,15 +4,18 @@
 --
 -- CANH BAO: script XOA 2 bang nay (neu da co) roi tao lai, du lieu trong 2 bang se mat.
 --
+-- Khoa ngoai mang dung ten khoa chinh ma no tro toi (viva_attempts.viva_exams_id), tru khoa ngoai
+-- dat theo vai tro (lecturer_id, student_id).
 -- Khoa chinh dat ten theo bang de khong trung nhau:
---     viva_exams.viva_exams_id       -> EXxxxxxx   (EX + 6 chu so, do code Java sinh)
+--     viva_exams.viva_exams_id       -> AIVES_EXAM_yyyy_xxxxxx (do code Java sinh, cung la ma vao thi;
+--                                       dai 22 ky tu nen cot la NVARCHAR(30), khong co cot exam_code rieng)
 --     viva_attempts.viva_attempts_id -> ATxxxxxxxx (AT + 8 chu so, do code Java sinh)
 --
 -- Thoi gian cua phien thi (start_at, end_at, cancelled_at, started_at, deadline_at,
 -- completed_at) luu theo gio UTC. created_at / updated_at luu theo gio may chu nhu bang users.
 --
 -- So voi ERD:
---   viva_exams    + exam_code, passcode, cancelled_at ; - status (trang thai tinh tu thoi gian)
+--   viva_exams    + passcode, cancelled_at ; - status (trang thai tinh tu thoi gian)
 --   viva_attempts + deadline_at, updated_at
 -- Cac cot ERD ma code chua dung (max_follow_up_per_question, prepare_seconds, answer_seconds,
 -- domain_keywords, result_status, total_*_score, full_audio_key, published_at) deu co DEFAULT
@@ -27,12 +30,11 @@ IF OBJECT_ID(N'dbo.viva_exams', N'U') IS NOT NULL DROP TABLE dbo.viva_exams;
 GO
 
 CREATE TABLE dbo.viva_exams (
-    viva_exams_id              NVARCHAR(20)  NOT NULL,
+    viva_exams_id              NVARCHAR(30)  NOT NULL,   -- AIVES_EXAM_yyyy_xxxxxx, cung la ma vao thi
     lecturer_id                NVARCHAR(20)  NOT NULL,   -- nguoi tao phien (LECTURER hoac ADMIN)
     title                      NVARCHAR(200) NOT NULL,
     description                NVARCHAR(MAX) NULL,
-    exam_code                  NVARCHAR(30)  NOT NULL,   -- AIVES_EXAM_yyyy_xxxxxx
-    passcode                   NVARCHAR(10)  NOT NULL,   -- ma truy cap 6 chu so
+    passcode                   NVARCHAR(6)   NOT NULL,   -- ma truy cap 6 chu so
     duration_minutes           INT           NOT NULL,   -- thoi luong lam bai cua moi sinh vien
     max_follow_up_per_question INT           NOT NULL CONSTRAINT DF_viva_exams_max_follow_up   DEFAULT (2),
     prepare_seconds            INT           NOT NULL CONSTRAINT DF_viva_exams_prepare_seconds DEFAULT (30),
@@ -45,8 +47,7 @@ CREATE TABLE dbo.viva_exams (
     updated_at                 DATETIME      NOT NULL CONSTRAINT DF_viva_exams_updated_at DEFAULT (GETDATE()),
 
     CONSTRAINT PK_viva_exams           PRIMARY KEY (viva_exams_id),
-    CONSTRAINT UQ_viva_exams_exam_code UNIQUE (exam_code),
-    CONSTRAINT FK_viva_exams_lecturer  FOREIGN KEY (lecturer_id) REFERENCES dbo.users (id),
+    CONSTRAINT FK_viva_exams_lecturer  FOREIGN KEY (lecturer_id) REFERENCES dbo.users (users_id),
     CONSTRAINT CK_viva_exams_duration  CHECK (duration_minutes BETWEEN 5 AND 300),
     CONSTRAINT CK_viva_exams_follow_up CHECK (max_follow_up_per_question BETWEEN 0 AND 5),
     CONSTRAINT CK_viva_exams_time      CHECK (end_at > start_at)
@@ -58,7 +59,7 @@ GO
 
 CREATE TABLE dbo.viva_attempts (
     viva_attempts_id  NVARCHAR(20)  NOT NULL,
-    viva_exam_id      NVARCHAR(20)  NOT NULL,
+    viva_exams_id     NVARCHAR(30)  NOT NULL,
     student_id        NVARCHAR(20)  NOT NULL,
     status            NVARCHAR(20)  NOT NULL,
     result_status     NVARCHAR(20)  NOT NULL CONSTRAINT DF_viva_attempts_result_status DEFAULT (N'NONE'),
@@ -73,10 +74,10 @@ CREATE TABLE dbo.viva_attempts (
     updated_at        DATETIME      NOT NULL CONSTRAINT DF_viva_attempts_updated_at DEFAULT (GETDATE()),
 
     CONSTRAINT PK_viva_attempts              PRIMARY KEY (viva_attempts_id),
-    CONSTRAINT FK_viva_attempts_exam         FOREIGN KEY (viva_exam_id) REFERENCES dbo.viva_exams (viva_exams_id),
-    CONSTRAINT FK_viva_attempts_student      FOREIGN KEY (student_id)   REFERENCES dbo.users (id),
+    CONSTRAINT FK_viva_attempts_exam         FOREIGN KEY (viva_exams_id) REFERENCES dbo.viva_exams (viva_exams_id),
+    CONSTRAINT FK_viva_attempts_student      FOREIGN KEY (student_id)   REFERENCES dbo.users (users_id),
     -- Moi sinh vien chi co 1 luot thi trong 1 phien
-    CONSTRAINT UQ_viva_attempts_exam_student UNIQUE (viva_exam_id, student_id),
+    CONSTRAINT UQ_viva_attempts_exam_student UNIQUE (viva_exams_id, student_id),
     CONSTRAINT CK_viva_attempts_status       CHECK (status IN (N'NOT_STARTED', N'IN_PROGRESS', N'COMPLETED', N'ABANDONED')),
     CONSTRAINT CK_viva_attempts_result       CHECK (result_status IN (N'NONE', N'GRADING', N'PENDING_REVIEW', N'GRADING_FAILED', N'PUBLISHED')),
     CONSTRAINT CK_viva_attempts_deadline     CHECK (deadline_at > started_at)

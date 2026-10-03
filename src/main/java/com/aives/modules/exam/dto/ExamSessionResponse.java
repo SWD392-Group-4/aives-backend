@@ -20,8 +20,8 @@ import lombok.Setter;
 @Builder
 public class ExamSessionResponse {
 
+    // Id phien thi, dong thoi la ma vao thi (AIVES_EXAM_yyyy_xxxxxx)
     private String id;
-    private String examCode;
     private String passcode;
     private String title;
     private String description;

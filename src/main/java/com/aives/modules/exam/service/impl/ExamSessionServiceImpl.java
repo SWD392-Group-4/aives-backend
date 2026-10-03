@@ -70,7 +70,6 @@ public class ExamSessionServiceImpl implements ExamSessionService {
                 .lecturerId(actor.getId())
                 .title(request.getTitle().trim())
                 .description(normalizeDescription(request.getDescription()))
-                .examCode(codeGenerator.generateExamCode())
                 .passcode(codeGenerator.generatePasscode())
                 .durationMinutes(request.getDurationMinutes())
                 .startAt(startAt)
@@ -97,7 +96,7 @@ public class ExamSessionServiceImpl implements ExamSessionService {
             String pattern = "%" + escapeLike(keyword.trim().toLowerCase(Locale.ROOT)) + "%";
             spec = spec.and((root, query, cb) -> cb.or(
                     cb.like(cb.lower(root.get("title")), pattern, LIKE_ESCAPE),
-                    cb.like(cb.lower(root.get("examCode")), pattern, LIKE_ESCAPE)));
+                    cb.like(cb.lower(root.get("id")), pattern, LIKE_ESCAPE)));
         }
         if (statusFilter != null) {
             spec = spec.and(statusSpec(statusFilter, now));

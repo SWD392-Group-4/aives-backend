@@ -11,4 +11,7 @@ public interface ExamAttemptService {
     ExamAttemptResponse joinSession(String studentId, JoinExamRequest request);
 
     ExamAttemptResponse getAttempt(String attemptId, String studentId);
+
+    /** Sinh vien chu dong ket thuc bai thi truoc khi het gio. Goi lai nhieu lan van tra ve ket qua nhu lan dau. */
+    ExamAttemptResponse finishAttempt(String attemptId, String studentId);
 }

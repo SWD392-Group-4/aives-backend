@@ -37,7 +37,7 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
 
     /**
      * Khong dat @Transactional o day: neu 2 request cung tao luot thi (bam 2 lan),
-     * request sau dung UNIQUE(viva_exam_id, student_id) va duoc doc lai luot thi da co.
+     * request sau dung UNIQUE(viva_exams_id, student_id) va duoc doc lai luot thi da co.
      */
     @Override
     public ExamAttemptResponse joinSession(String studentId, JoinExamRequest request) {
@@ -48,9 +48,9 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         }
 
         // 2. Sai dinh dang: bao ngay, khong tinh la 1 lan nhap sai
-        String examCode = request.getExamCode().trim().toUpperCase(Locale.ROOT);
+        String examId = request.getExamId().trim().toUpperCase(Locale.ROOT);
         String passcode = request.getPasscode().trim();
-        if (!ExamCodeGenerator.EXAM_CODE_PATTERN.matcher(examCode).matches()) {
+        if (!ExamCodeGenerator.EXAM_ID_PATTERN.matcher(examId).matches()) {
             throw new BusinessException(ErrorCode.EXAM_CODE_INVALID_FORMAT);
         }
         if (!ExamCodeGenerator.PASSCODE_PATTERN.matcher(passcode).matches()) {
@@ -58,7 +58,7 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         }
 
         // 3. Ma phien khong ton tai va sai ma truy cap tra CUNG 1 loi, de khong do duoc ma phien nao co that
-        VivaExam exam = examRepository.findByExamCode(examCode).orElse(null);
+        VivaExam exam = examRepository.findById(examId).orElse(null);
         if (exam == null || !constantTimeEquals(exam.getPasscode(), passcode)) {
             int remaining = joinAttemptLimiter.recordFailure(studentId);
             if (remaining == 0) {
@@ -117,15 +117,7 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
     @Override
     @Transactional
     public ExamAttemptResponse getAttempt(String attemptId, String studentId) {
-        // Luot thi cua nguoi khac cung tra "khong tim thay", khong de lo la luot thi do co ton tai
-        VivaAttempt attempt = attemptRepository.findWithExamById(attemptId)
-                .filter(found -> found.getStudentId().equals(studentId))
-                .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_ATTEMPT_NOT_FOUND));
-
-        if (attempt.getExam().isCancelled()) {
-            throw new BusinessException(ErrorCode.EXAM_SESSION_CANCELLED);
-        }
-
+        VivaAttempt attempt = findOwnAttempt(attemptId, studentId);
         LocalDateTime now = now();
         // Het gio ma DB con IN_PROGRESS thi chot luon trang thai
         if (attempt.getStatus() == AttemptStatus.IN_PROGRESS && !now.isBefore(attempt.getDeadlineAt())) {
@@ -134,6 +126,32 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
             attemptRepository.save(attempt);
         }
         return examMapper.toAttemptResponse(attempt, attempt.getExam(), now);
+    }
+
+    @Override
+    @Transactional
+    public ExamAttemptResponse finishAttempt(String attemptId, String studentId) {
+        VivaAttempt attempt = findOwnAttempt(attemptId, studentId);
+        LocalDateTime now = now();
+        // Da ket thuc tu truoc (hoac da het gio) thi giu nguyen, khong ghi de thoi diem ket thuc
+        if (attempt.getStatus() == AttemptStatus.IN_PROGRESS) {
+            attempt.setStatus(AttemptStatus.COMPLETED);
+            attempt.setCompletedAt(now.isBefore(attempt.getDeadlineAt()) ? now : attempt.getDeadlineAt());
+            attemptRepository.save(attempt);
+        }
+        return examMapper.toAttemptResponse(attempt, attempt.getExam(), now);
+    }
+
+    /** Lay luot thi cua chinh sinh vien dang dang nhap, kem phien thi. */
+    private VivaAttempt findOwnAttempt(String attemptId, String studentId) {
+        // Luot thi cua nguoi khac cung tra "khong tim thay", khong de lo la luot thi do co ton tai
+        VivaAttempt attempt = attemptRepository.findWithExamById(attemptId)
+                .filter(found -> found.getStudentId().equals(studentId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_ATTEMPT_NOT_FOUND));
+        if (attempt.getExam().isCancelled()) {
+            throw new BusinessException(ErrorCode.EXAM_SESSION_CANCELLED);
+        }
+        return attempt;
     }
 
     private ExamAttemptResponse resume(VivaAttempt attempt, VivaExam exam, LocalDateTime now) {

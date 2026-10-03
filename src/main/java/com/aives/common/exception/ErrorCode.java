@@ -11,7 +11,6 @@ public enum ErrorCode {
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "Yêu cầu không hợp lệ"),
     CANNOT_DELETE_SELF(HttpStatus.BAD_REQUEST, "Không thể tự xoá tài khoản đang đăng nhập"),
     CANNOT_DISABLE_SELF(HttpStatus.BAD_REQUEST, "Không thể tự vô hiệu hoá tài khoản đang đăng nhập"),
-    STUDENT_CODE_REQUIRED(HttpStatus.BAD_REQUEST, "Sinh viên bắt buộc phải có mã sinh viên"),
     WRONG_CURRENT_PASSWORD(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không đúng"),
     EXAM_TIME_RANGE_INVALID(HttpStatus.BAD_REQUEST, "Thời gian đóng phiên phải sau thời gian mở phiên"),
     EXAM_START_IN_PAST(HttpStatus.BAD_REQUEST, "Thời gian mở phiên không được ở quá khứ"),
@@ -34,7 +33,6 @@ public enum ErrorCode {
     EXAM_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy phiên thi"),
     EXAM_ATTEMPT_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy lượt thi"),
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "Email đã tồn tại"),
-    STUDENT_CODE_ALREADY_EXISTS(HttpStatus.CONFLICT, "Mã sinh viên đã tồn tại"),
     DATA_CONFLICT(HttpStatus.CONFLICT, "Dữ liệu bị trùng hoặc vi phạm ràng buộc"),
     EXAM_SESSION_NOT_STARTED(HttpStatus.CONFLICT, "Phiên thi chưa đến giờ mở"),
     EXAM_SESSION_ENDED(HttpStatus.CONFLICT, "Phiên thi đã kết thúc"),
@@ -42,7 +40,7 @@ public enum ErrorCode {
     EXAM_SESSION_LOCKED_FIELDS(HttpStatus.CONFLICT, "Phiên thi đã mở nên không thể đổi thời gian mở phiên và thời lượng làm bài"),
     EXAM_END_CANNOT_SHORTEN(HttpStatus.CONFLICT, "Phiên thi đã mở nên chỉ có thể kéo dài thời gian đóng phiên"),
     EXAM_SESSION_HAS_ATTEMPTS(HttpStatus.CONFLICT, "Phiên thi đã kết thúc và có sinh viên tham gia nên không thể xoá"),
-    EXAM_ATTEMPT_FINISHED(HttpStatus.CONFLICT, "Bạn đã hết thời gian làm bài của phiên thi này"),
+    EXAM_ATTEMPT_FINISHED(HttpStatus.CONFLICT, "Bạn đã kết thúc bài thi hoặc đã hết thời gian làm bài của phiên thi này"),
 
     // 429
     EXAM_JOIN_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "Bạn đã nhập sai quá nhiều lần, vui lòng thử lại sau"),

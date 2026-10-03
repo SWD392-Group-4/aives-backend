@@ -13,7 +13,6 @@ public class UserMapper {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole())
-                .studentCode(user.getStudentCode())
                 .active(user.isActive())
                 .createdAt(user.getCreatedAt())
                 .build();

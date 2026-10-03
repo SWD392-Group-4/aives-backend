@@ -45,31 +45,30 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // 1 admin
-        createUser(adminEmail.trim().toLowerCase(), adminPassword, adminFullName, Role.ADMIN, null);
+        createUser(adminEmail.trim().toLowerCase(), adminPassword, adminFullName, Role.ADMIN);
 
         // 2 lecturer
-        createUser("lecturer01@fe.edu.vn", defaultPassword, "Nguyễn Thị Hồng Lan", Role.LECTURER, null);
-        createUser("lecturer02@fe.edu.vn", defaultPassword, "Trần Quốc Bảo", Role.LECTURER, null);
+        createUser("lecturer01@fe.edu.vn", defaultPassword, "Nguyễn Thị Hồng Lan", Role.LECTURER);
+        createUser("lecturer02@fe.edu.vn", defaultPassword, "Trần Quốc Bảo", Role.LECTURER);
 
         // 7 student
-        createUser("student01@fpt.edu.vn", defaultPassword, "Lê Minh Anh", Role.STUDENT, "SE180001");
-        createUser("student02@fpt.edu.vn", defaultPassword, "Phạm Gia Huy", Role.STUDENT, "SE180002");
-        createUser("student03@fpt.edu.vn", defaultPassword, "Võ Thị Thu Trang", Role.STUDENT, "SE180003");
-        createUser("student04@fpt.edu.vn", defaultPassword, "Đặng Hoàng Nam", Role.STUDENT, "SE180004");
-        createUser("student05@fpt.edu.vn", defaultPassword, "Bùi Khánh Linh", Role.STUDENT, "SE180005");
-        createUser("student06@fpt.edu.vn", defaultPassword, "Hoàng Đức Thịnh", Role.STUDENT, "SE180006");
-        createUser("student07@fpt.edu.vn", defaultPassword, "Ngô Bảo Ngọc", Role.STUDENT, "SE180007");
+        createUser("student01@fpt.edu.vn", defaultPassword, "Lê Minh Anh", Role.STUDENT);
+        createUser("student02@fpt.edu.vn", defaultPassword, "Phạm Gia Huy", Role.STUDENT);
+        createUser("student03@fpt.edu.vn", defaultPassword, "Võ Thị Thu Trang", Role.STUDENT);
+        createUser("student04@fpt.edu.vn", defaultPassword, "Đặng Hoàng Nam", Role.STUDENT);
+        createUser("student05@fpt.edu.vn", defaultPassword, "Bùi Khánh Linh", Role.STUDENT);
+        createUser("student06@fpt.edu.vn", defaultPassword, "Hoàng Đức Thịnh", Role.STUDENT);
+        createUser("student07@fpt.edu.vn", defaultPassword, "Ngô Bảo Ngọc", Role.STUDENT);
 
         log.info("Seeded {} sample users", userRepository.count());
     }
 
-    private void createUser(String email, String rawPassword, String fullName, Role role, String studentCode) {
+    private void createUser(String email, String rawPassword, String fullName, Role role) {
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordEncoder.encode(rawPassword))
                 .fullName(fullName)
                 .role(role)
-                .studentCode(studentCode)
                 .active(true)
                 .build();
         user.setId(userIdGenerator.generate(role));

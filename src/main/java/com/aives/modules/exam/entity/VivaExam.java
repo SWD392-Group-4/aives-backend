@@ -19,10 +19,11 @@ import org.hibernate.annotations.Nationalized;
  */
 @Entity
 @Table(name = "viva_exams")
-// Cot khoa chinh trong DB ten la viva_exams_id (BaseEntity mac dinh la "id")
+// Khoa chinh viva_exams_id cung chinh la MA VAO THI sinh vien nhap: AIVES_EXAM_yyyy_xxxxxx (22 ky tu),
+// nen cot dai 30 thay vi 20 nhu cac bang khac. Khong con cot exam_code rieng.
 @AttributeOverride(
         name = "id",
-        column = @Column(name = "viva_exams_id", nullable = false, updatable = false, length = 20))
+        column = @Column(name = "viva_exams_id", nullable = false, updatable = false, length = 30))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,12 +43,8 @@ public class VivaExam extends BaseEntity {
     @Column(name = "description", length = 2000)
     private String description;
 
-    // Ma vao thi: AIVES_EXAM_yyyy_xxxxxx
-    @Column(name = "exam_code", nullable = false, unique = true, length = 30)
-    private String examCode;
-
     // Ma truy cap 6 chu so, dung chung cho ca phien. Nguoi tao xem lai va tao lai duoc.
-    @Column(name = "passcode", nullable = false, length = 10)
+    @Column(name = "passcode", nullable = false, length = 6)
     private String passcode;
 
     // Thoi luong lam bai cua moi sinh vien (phut)

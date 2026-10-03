@@ -32,7 +32,7 @@ import lombok.Setter;
         name = "viva_attempts",
         uniqueConstraints = @UniqueConstraint(
                 name = "UQ_viva_attempts_exam_student",
-                columnNames = {"viva_exam_id", "student_id"}))
+                columnNames = {"viva_exams_id", "student_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -41,7 +41,8 @@ import lombok.Setter;
 public class VivaAttempt extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "viva_exam_id", referencedColumnName = "viva_exams_id", nullable = false)
+    // Khoa ngoai mang dung ten khoa chinh ma no tro toi
+    @JoinColumn(name = "viva_exams_id", referencedColumnName = "viva_exams_id", nullable = false)
     private VivaExam exam;
 
     // Chi luu id vi User thuoc module auth

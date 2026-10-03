@@ -17,7 +17,7 @@ public class JoinExamRequest {
     @Schema(example = "AIVES_EXAM_2026_049282")
     @NotBlank(message = "Mã phiên thi không được để trống")
     @Size(max = 40, message = "Mã phiên thi không đúng định dạng")
-    private String examCode;
+    private String examId;
 
     @Schema(example = "123456")
     @NotBlank(message = "Mã truy cập không được để trống")

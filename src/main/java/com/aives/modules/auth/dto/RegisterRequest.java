@@ -12,7 +12,6 @@ import lombok.Setter;
 /**
  * Tu dang ky tai khoan: chi tao duoc role STUDENT.
  * Lecturer phai do admin tao (POST /api/admin/users).
- * Ma sinh vien khong nhap o day: he thong tu sinh ngau nhien (StudentCodeGenerator).
  */
 @Getter
 @Setter

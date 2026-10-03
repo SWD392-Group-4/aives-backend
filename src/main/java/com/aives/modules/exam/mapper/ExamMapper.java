@@ -33,7 +33,6 @@ public class ExamMapper {
         ExamSessionStatus status = statusOf(exam, now);
         return ExamSessionResponse.builder()
                 .id(exam.getId())
-                .examCode(exam.getExamCode())
                 .passcode(exam.getPasscode())
                 .title(exam.getTitle())
                 .description(exam.getDescription())
@@ -51,17 +50,24 @@ public class ExamMapper {
 
     /** exam duoc truyen rieng vi attempt.getExam() la LAZY, co the chua duoc nap. */
     public ExamAttemptResponse toAttemptResponse(VivaAttempt attempt, VivaExam exam, LocalDateTime now) {
-        long remainingSeconds = Math.max(Duration.between(now, attempt.getDeadlineAt()).getSeconds(), 0);
+        // Da ket thuc (sinh vien bam ket thuc som) thi khong con thoi gian, du chua toi han
+        long remainingSeconds = attempt.getStatus() == AttemptStatus.COMPLETED
+                ? 0
+                : Math.max(Duration.between(now, attempt.getDeadlineAt()).getSeconds(), 0);
         // Het gio thi coi nhu da xong, ke ca khi DB chua kip cap nhat
         AttemptStatus status = remainingSeconds == 0 ? AttemptStatus.COMPLETED : attempt.getStatus();
+        LocalDateTime completedAt = attempt.getCompletedAt() != null
+                ? attempt.getCompletedAt()
+                : (status == AttemptStatus.COMPLETED ? attempt.getDeadlineAt() : null);
         return ExamAttemptResponse.builder()
                 .attemptId(attempt.getId())
-                .examCode(exam.getExamCode())
+                .examId(exam.getId())
                 .title(exam.getTitle())
                 .durationMinutes(exam.getDurationMinutes())
                 .status(status)
                 .startedAt(toInstant(attempt.getStartedAt()))
                 .deadlineAt(toInstant(attempt.getDeadlineAt()))
+                .completedAt(completedAt == null ? null : toInstant(completedAt))
                 .serverTime(toInstant(now))
                 .remainingSeconds(remainingSeconds)
                 .build();

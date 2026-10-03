@@ -35,7 +35,7 @@ public class ExamSessionController {
 
     private final ExamSessionService examSessionService;
 
-    @Operation(summary = "Tạo phiên thi. Trả về mã phiên (AIVES_EXAM_yyyy_xxxxxx) và mã truy cập 6 số")
+    @Operation(summary = "Tạo phiên thi. Trả về id phiên (AIVES_EXAM_yyyy_xxxxxx, cũng là mã vào thi) và mã truy cập 6 số")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ExamSessionResponse> createSession(
@@ -55,7 +55,7 @@ public class ExamSessionController {
         return ApiResponse.ok(examSessionService.getSessions(principal, status, keyword, page, size));
     }
 
-    @Operation(summary = "Chi tiết 1 phiên thi theo id (vd: EX482913)")
+    @Operation(summary = "Chi tiết 1 phiên thi theo id (vd: AIVES_EXAM_2026_049282)")
     @GetMapping("/{id}")
     public ApiResponse<ExamSessionResponse> getSession(
             @PathVariable String id,

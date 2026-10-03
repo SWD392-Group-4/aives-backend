@@ -20,12 +20,15 @@ import lombok.Setter;
 public class ExamAttemptResponse {
 
     private String attemptId;
-    private String examCode;
+    // Id phien thi (AIVES_EXAM_yyyy_xxxxxx)
+    private String examId;
     private String title;
     private int durationMinutes;
     private AttemptStatus status;
     private Instant startedAt;
     private Instant deadlineAt;
+    // Khac null khi luot thi da ket thuc (sinh vien bam ket thuc hoac het gio)
+    private Instant completedAt;
     private Instant serverTime;
     private long remainingSeconds;
 }

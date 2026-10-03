@@ -11,7 +11,6 @@ import com.aives.modules.auth.enums.Role;
 import com.aives.modules.auth.mapper.UserMapper;
 import com.aives.modules.auth.repository.UserRepository;
 import com.aives.modules.auth.service.UserService;
-import com.aives.modules.auth.util.StudentCodeGenerator;
 import com.aives.modules.auth.util.UserIdGenerator;
 import java.util.Collection;
 import java.util.List;
@@ -22,7 +21,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +30,6 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final UserIdGenerator userIdGenerator;
-    private final StudentCodeGenerator studentCodeGenerator;
 
     @Override
     @Transactional(readOnly = true)
@@ -69,26 +66,11 @@ public class UserServiceImpl implements UserService {
 
         Role role = request.getRole();
 
-        // Chi STUDENT moi co ma sinh vien; admin / lecturer luon de null.
-        // Khong gui ma thi he thong tu sinh ngau nhien (SE + 6 chu so).
-        String studentCode = null;
-        if (role == Role.STUDENT) {
-            if (StringUtils.hasText(request.getStudentCode())) {
-                studentCode = request.getStudentCode().trim().toUpperCase();
-                if (userRepository.existsByStudentCode(studentCode)) {
-                    throw new BusinessException(ErrorCode.STUDENT_CODE_ALREADY_EXISTS);
-                }
-            } else {
-                studentCode = studentCodeGenerator.generate();
-            }
-        }
-
         User user = User.builder()
                 .email(email)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName().trim())
                 .role(role)
-                .studentCode(studentCode)
                 .active(true)
                 .build();
         user.setId(userIdGenerator.generate(role));

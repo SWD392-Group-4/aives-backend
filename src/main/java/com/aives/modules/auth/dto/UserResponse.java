@@ -19,7 +19,6 @@ public class UserResponse {
     private String email;
     private String fullName;
     private Role role;
-    private String studentCode;
     private boolean active;
     private LocalDateTime createdAt;
 }
