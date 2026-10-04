@@ -53,6 +53,19 @@ public class VivaAttempt extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     private AttemptStatus status;
 
+    @Builder.Default
+    @Column(name = "result_status", nullable = false, length = 20)
+    private String resultStatus = "NONE";
+
+    @Column(name = "total_ai_score", precision = 6, scale = 2)
+    private java.math.BigDecimal totalAiScore;
+
+    @Column(name = "total_final_score", precision = 6, scale = 2)
+    private java.math.BigDecimal totalFinalScore;
+
+    @Column(name = "full_audio_key", length = 500)
+    private String fullAudioKey;
+
     // Thoi diem sinh vien vao phien
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
@@ -63,4 +76,7 @@ public class VivaAttempt extends BaseEntity {
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
+
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
 }
