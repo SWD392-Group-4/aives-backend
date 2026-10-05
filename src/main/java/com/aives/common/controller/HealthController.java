@@ -21,7 +21,7 @@ public class HealthController {
     @GetMapping("/tables")
     public ApiResponse<java.util.List<String>> listTables() {
         java.util.List<String> tables = jdbcTemplate.queryForList(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+                "SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' AND table_schema IN ('dbo', 'public') ORDER BY table_name",
                 String.class
         );
         return ApiResponse.ok(tables);

@@ -2,8 +2,8 @@ spring:
   application:
     name: aives-backend
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:supabase}
-    default: supabase
+    active: ${SPRING_PROFILES_ACTIVE:sqlserver}
+    default: sqlserver
   jpa:
     open-in-view: false
     properties:
