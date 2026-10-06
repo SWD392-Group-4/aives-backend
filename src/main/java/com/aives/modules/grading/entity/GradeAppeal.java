@@ -15,6 +15,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
@@ -34,7 +35,7 @@ public class GradeAppeal extends BaseEntity {
     private QuestionGrade questionGrade;
 
     @Nationalized
-    @Column(name = "reason", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "reason", nullable = false, length = Length.LONG32)
     private String reason;
 
     @Builder.Default
@@ -48,7 +49,7 @@ public class GradeAppeal extends BaseEntity {
     private BigDecimal scoreAfter;
 
     @Nationalized
-    @Column(name = "response", columnDefinition = "TEXT")
+    @Column(name = "response", length = Length.LONG32)
     private String response;
 
     @Column(name = "resolved_by", length = 20)

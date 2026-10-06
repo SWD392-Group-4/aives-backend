@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.hibernate.Length;
 
 @Entity
 @Table(name = "system_settings")
@@ -28,7 +29,7 @@ public class SystemSetting {
     @Column(name = "setting_key", nullable = false, length = 100)
     private String settingKey;
 
-    @Column(name = "setting_value", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "setting_value", nullable = false, length = Length.LONG32)
     private String settingValue;
 
     @Column(name = "updated_by", length = 20)

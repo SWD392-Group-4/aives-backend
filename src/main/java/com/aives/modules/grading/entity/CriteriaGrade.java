@@ -16,6 +16,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
@@ -49,10 +50,10 @@ public class CriteriaGrade extends BaseEntity {
     private BigDecimal finalScore;
 
     @Nationalized
-    @Column(name = "evidence_quote", columnDefinition = "TEXT")
+    @Column(name = "evidence_quote", length = Length.LONG32)
     private String evidenceQuote;
 
     @Nationalized
-    @Column(name = "rationale", columnDefinition = "TEXT")
+    @Column(name = "rationale", length = Length.LONG32)
     private String rationale;
 }

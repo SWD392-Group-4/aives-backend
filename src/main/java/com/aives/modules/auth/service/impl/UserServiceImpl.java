@@ -66,6 +66,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Map<String, UserResponse> getUsersByIds(Collection<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, userMapper::toResponse));
+    }
+
+    @Override
     @Transactional
     public UserResponse registerStudent(RegisterRequest request) {
         User user = newUser(request.getEmail(), request.getFullName(), RoleName.STUDENT, request.getPassword(), false);

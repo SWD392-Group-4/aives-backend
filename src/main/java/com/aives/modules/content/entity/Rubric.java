@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
@@ -33,7 +34,7 @@ public class Rubric extends BaseEntity {
     private String name;
 
     @Nationalized
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description", length = Length.LONG32)
     private String description;
 
     @Builder.Default

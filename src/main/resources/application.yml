@@ -4,6 +4,11 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:sqlserver}
     default: sqlserver
+  servlet:
+    multipart:
+      # File cau hoi giang vien gui len (pdf / docx / txt)
+      max-file-size: 10MB
+      max-request-size: 12MB
   jpa:
     open-in-view: false
     properties:
@@ -46,7 +51,34 @@ app:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:${MAIL_USERNAME:no-reply@aives.local}}
     from-name: AIVES
+  # AI: Gemini (key tao o https://aistudio.google.com/apikey, dat trong file .env, KHONG commit)
+  ai:
+    gemini:
+      # De trong = tat AI: phong van van chay nhung khong co cau hoi xoay
+      api-key: ${GEMINI_API_KEY:}
+      # Ten model lay tu danh sach https://ai.google.dev/gemini-api/docs/models. Google doi ten kha thuong xuyen:
+      # gap loi HTTP 404 "model ... is no longer available" thi doi GEMINI_MODEL trong .env theo goi y trong loi.
+      model: ${GEMINI_MODEL:gemini-3.8-flash}
+      # Thoi gian toi da cho 1 lan goi AI khi dang thi (ms). Qua thoi gian nay he thong tu chuyen cau hoi tiep theo.
+      read-timeout-ms: ${GEMINI_TIMEOUT_MS:20000}
+      # Thoi gian toi da cho viec nang: cham diem 1 cau hoi, doc file cau hoi giang vien gui len (ms)
+      long-read-timeout-ms: ${GEMINI_LONG_TIMEOUT_MS:120000}
+      # Muc "suy nghi" cua dong Gemini 3: minimal / low / medium / high. De trong = dung mac dinh cua model.
+      thinking-level: ${GEMINI_THINKING_LEVEL:low}
+      # Kieu cu cua dong Gemini 2.5 (0 = tat suy nghi). Chi dung khi thinking-level de trong. -1 = khong gui.
+      thinking-budget: ${GEMINI_THINKING_BUDGET:-1}
+  viva:
+    # Phien thi chua duoc gan cau hoi thi tu lay bay nhieu cau APPROVED (giai phap tam):
+    # uu tien bo cau hoi moi nhat cua nguoi tao phien, khong co thi lay du lieu mau
+    default-question-count: ${VIVA_DEFAULT_QUESTION_COUNT:3}
+  grading:
+    # true: backend tu chot luot thi qua han va goi AI cham cac luot thi vua xong (chay ngam)
+    auto-enabled: ${GRADING_AUTO_ENABLED:true}
+    # Bao lau quet 1 lan (ms)
+    poll-interval-ms: ${GRADING_POLL_INTERVAL_MS:5000}
   seed:
+    # true: tao bo cau hoi mau Toan lop 6 - 7 (1 bai hoc, 1 rubric, 5 cau hoi da duyet) neu chua co
+    sample-content: ${SEED_SAMPLE_CONTENT:true}
     admin:
       email: ${ADMIN_EMAIL:admin@aives.local}
       password: ${ADMIN_PASSWORD:Admin@123}

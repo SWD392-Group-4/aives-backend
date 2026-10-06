@@ -13,6 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
@@ -36,17 +37,17 @@ public class Question extends BaseEntity {
     private Rubric rubric;
 
     @Nationalized
-    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "content", nullable = false, length = Length.LONG32)
     private String content;
 
     @Column(name = "bloom_level", nullable = false, length = 20)
     private String bloomLevel;
 
     @Nationalized
-    @Column(name = "model_answer", columnDefinition = "TEXT")
+    @Column(name = "model_answer", length = Length.LONG32)
     private String modelAnswer;
 
-    @Column(name = "expected_keywords", columnDefinition = "TEXT")
+    @Column(name = "expected_keywords", length = Length.LONG32)
     private String expectedKeywords;
 
     @Builder.Default

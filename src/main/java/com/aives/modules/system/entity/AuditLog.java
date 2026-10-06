@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 
 @Entity
 @Table(name = "audit_logs")
@@ -35,9 +36,9 @@ public class AuditLog extends BaseEntity {
     @Column(name = "entity_id", nullable = false, length = 50)
     private String entityId;
 
-    @Column(name = "old_value", columnDefinition = "TEXT")
+    @Column(name = "old_value", length = Length.LONG32)
     private String oldValue;
 
-    @Column(name = "new_value", columnDefinition = "TEXT")
+    @Column(name = "new_value", length = Length.LONG32)
     private String newValue;
 }

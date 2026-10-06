@@ -18,6 +18,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
@@ -51,19 +52,19 @@ public class QuestionGrade extends BaseEntity {
     private BigDecimal finalScore;
 
     @Nationalized
-    @Column(name = "ai_strengths", columnDefinition = "TEXT")
+    @Column(name = "ai_strengths", length = Length.LONG32)
     private String aiStrengths;
 
     @Nationalized
-    @Column(name = "ai_weaknesses", columnDefinition = "TEXT")
+    @Column(name = "ai_weaknesses", length = Length.LONG32)
     private String aiWeaknesses;
 
     @Nationalized
-    @Column(name = "ai_feedback", columnDefinition = "TEXT")
+    @Column(name = "ai_feedback", length = Length.LONG32)
     private String aiFeedback;
 
     @Nationalized
-    @Column(name = "lecturer_note", columnDefinition = "TEXT")
+    @Column(name = "lecturer_note", length = Length.LONG32)
     private String lecturerNote;
 
     @Builder.Default

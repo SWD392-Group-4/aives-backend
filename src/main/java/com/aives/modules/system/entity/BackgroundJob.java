@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 
 @Entity
 @Table(name = "background_jobs")
@@ -27,7 +28,7 @@ public class BackgroundJob extends BaseEntity {
     @Column(name = "job_type", nullable = false, length = 50)
     private String jobType;
 
-    @Column(name = "payload", columnDefinition = "TEXT")
+    @Column(name = "payload", length = Length.LONG32)
     private String payload;
 
     @Builder.Default
@@ -41,6 +42,6 @@ public class BackgroundJob extends BaseEntity {
     @Column(name = "next_run_at")
     private LocalDateTime nextRunAt;
 
-    @Column(name = "last_error", columnDefinition = "TEXT")
+    @Column(name = "last_error", length = Length.LONG32)
     private String lastError;
 }

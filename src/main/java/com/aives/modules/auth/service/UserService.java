@@ -19,6 +19,9 @@ public interface UserService {
     /** Tra ve map id -> ho ten. Id khong ton tai thi khong co trong map. Dung cho module khac hien ten user. */
     Map<String, String> getFullNamesByIds(Collection<String> userIds);
 
+    /** Tra ve map id -> thong tin user (ho ten, email...). Id khong ton tai thi khong co trong map. */
+    Map<String, UserResponse> getUsersByIds(Collection<String> userIds);
+
     /** Sinh vien tu dang ky: role luon la STUDENT, mat khau do nguoi dung tu dat. */
     UserResponse registerStudent(RegisterRequest request);
 
