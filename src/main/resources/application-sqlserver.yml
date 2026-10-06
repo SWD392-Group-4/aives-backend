@@ -1,10 +1,19 @@
-# Profile mac dinh: SQL Server, database "aives". Tao bang truoc bang database/01_users.sql.
+# Profile: SQL Server, database "aives"
 spring:
   datasource:
-    url: ${DB_URL:jdbc:sqlserver://localhost:1433;databaseName=aives;encrypt=true;trustServerCertificate=true}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:12345}
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    url: ${DB_URL:${SPRING_DATASOURCE_URL:jdbc:sqlserver://localhost:1433;databaseName=aives;encrypt=true;trustServerCertificate=true}}
+    username: ${DB_USERNAME:${SPRING_DATASOURCE_USERNAME:sa}}
+    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:123456}}
+    hikari:
+      pool-name: AivesHikariMSSQL
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
   jpa:
     hibernate:
-      # Bang duoc tao bang script trong thu muc database/, Hibernate khong tu sua schema.
-      ddl-auto: none
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+        use_nationalized_character_data: true

@@ -51,6 +51,21 @@ public class VivaExam extends BaseEntity {
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
 
+    @Builder.Default
+    @Column(name = "max_follow_up_per_question", nullable = false)
+    private Integer maxFollowUpPerQuestion = 2;
+
+    @Builder.Default
+    @Column(name = "prepare_seconds", nullable = false)
+    private Integer prepareSeconds = 30;
+
+    @Builder.Default
+    @Column(name = "answer_seconds", nullable = false)
+    private Integer answerSeconds = 120;
+
+    @Column(name = "domain_keywords", columnDefinition = "TEXT")
+    private String domainKeywords;
+
     @Column(name = "start_at", nullable = false)
     private LocalDateTime startAt;
 
