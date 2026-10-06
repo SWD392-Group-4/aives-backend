@@ -12,7 +12,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface VivaAttemptRepository extends JpaRepository<VivaAttempt, String> {
 
-    Optional<VivaAttempt> findByExam_IdAndStudentId(String examId, String studentId);
+    // Luot thi moi nhat cua sinh vien trong phien (attempt_no lon nhat)
+    Optional<VivaAttempt> findFirstByExam_IdAndStudentIdOrderByAttemptNoDesc(String examId, String studentId);
 
     long countByExam_Id(String examId);
 

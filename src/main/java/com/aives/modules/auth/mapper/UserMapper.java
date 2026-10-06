@@ -12,8 +12,9 @@ public class UserMapper {
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
-                .role(user.getRole())
+                .role(user.getRoleName())
                 .active(user.isActive())
+                .mustChangePassword(user.isMustChangePassword())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

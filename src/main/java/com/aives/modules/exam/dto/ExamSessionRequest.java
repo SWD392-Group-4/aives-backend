@@ -45,4 +45,9 @@ public class ExamSessionRequest {
     @Min(value = 5, message = "Thời lượng làm bài tối thiểu 5 phút")
     @Max(value = 300, message = "Thời lượng làm bài tối đa 300 phút")
     private Integer durationMinutes;
+
+    @Schema(example = "1", description = "Số lượt thi tối đa của mỗi sinh viên trong phiên (1-10). Bỏ trống: 1 khi tạo, giữ nguyên khi sửa")
+    @Min(value = 1, message = "Số lượt thi tối đa ít nhất là 1")
+    @Max(value = 10, message = "Số lượt thi tối đa không quá 10")
+    private Integer maxAttempts;
 }

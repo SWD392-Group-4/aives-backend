@@ -37,7 +37,7 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
 
     /**
      * Khong dat @Transactional o day: neu 2 request cung tao luot thi (bam 2 lan),
-     * request sau dung UNIQUE(viva_exams_id, student_id) va duoc doc lai luot thi da co.
+     * request sau dung UNIQUE(viva_exams_id, student_id, attempt_no) va duoc doc lai luot thi da co.
      */
     @Override
     public ExamAttemptResponse joinSession(String studentId, JoinExamRequest request) {
@@ -75,13 +75,22 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
 
         LocalDateTime now = now();
 
-        // 5. Da vao truoc do: tra lai dung luot thi cu, dong ho KHONG chay lai tu dau
-        VivaAttempt existing = attemptRepository.findByExam_IdAndStudentId(exam.getId(), studentId).orElse(null);
-        if (existing != null) {
-            return resume(existing, exam, now);
+        // 5. Dang co luot thi chua xong: tra lai dung luot do, dong ho KHONG chay lai tu dau
+        VivaAttempt latest = findLatestAttempt(exam.getId(), studentId);
+        if (latest != null && isRunning(latest, now)) {
+            return examMapper.toAttemptResponse(latest, exam, now);
         }
 
-        // 6. Chua vao lan nao: phien phai dang mo
+        // 6. Luot truoc da xong (hoac chua thi lan nao): con luot thi moi duoc vao tiep.
+        //    attempt_no danh so lien tuc tu 1 nen attempt_no cua luot moi nhat = so luot da dung.
+        int usedAttempts = latest == null ? 0 : latest.getAttemptNo();
+        int maxAttempts = exam.getMaxAttempts();
+        if (usedAttempts >= maxAttempts) {
+            throw new BusinessException(ErrorCode.EXAM_ATTEMPT_LIMIT_REACHED,
+                    "Bạn đã dùng hết " + usedAttempts + "/" + maxAttempts + " lượt thi của phiên thi này");
+        }
+
+        // 7. Tao luot thi moi thi phien phai dang mo
         if (now.isBefore(exam.getStartAt())) {
             throw new BusinessException(ErrorCode.EXAM_SESSION_NOT_STARTED);
         }
@@ -89,7 +98,14 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
             throw new BusinessException(ErrorCode.EXAM_SESSION_ENDED);
         }
 
-        // 7. Han lam bai = luc vao + thoi luong, nhung khong vuot qua gio dong phien
+        // Luot truoc het gio ma DB con IN_PROGRESS thi chot lai truoc khi mo luot moi
+        if (latest != null && latest.getStatus() == AttemptStatus.IN_PROGRESS) {
+            latest.setStatus(AttemptStatus.COMPLETED);
+            latest.setCompletedAt(latest.getDeadlineAt());
+            attemptRepository.save(latest);
+        }
+
+        // 8. Han lam bai = luc vao + thoi luong, nhung khong vuot qua gio dong phien
         LocalDateTime deadlineAt = now.plusMinutes(exam.getDurationMinutes());
         if (deadlineAt.isAfter(exam.getEndAt())) {
             deadlineAt = exam.getEndAt();
@@ -98,6 +114,7 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         VivaAttempt attempt = VivaAttempt.builder()
                 .exam(exam)
                 .studentId(studentId)
+                .attemptNo(usedAttempts + 1)
                 .status(AttemptStatus.IN_PROGRESS)
                 .startedAt(now)
                 .deadlineAt(deadlineAt)
@@ -107,10 +124,12 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         try {
             return examMapper.toAttemptResponse(attemptRepository.saveAndFlush(attempt), exam, now);
         } catch (DataIntegrityViolationException ex) {
-            // Request song song da tao luot thi truoc
-            VivaAttempt created = attemptRepository.findByExam_IdAndStudentId(exam.getId(), studentId)
-                    .orElseThrow(() -> ex);
-            return resume(created, exam, now);
+            // Request song song da tao luot thi nay truoc: tra lai luot do, khong tao trung
+            VivaAttempt created = findLatestAttempt(exam.getId(), studentId);
+            if (created == null || !isRunning(created, now)) {
+                throw ex;
+            }
+            return examMapper.toAttemptResponse(created, exam, now);
         }
     }
 
@@ -154,11 +173,13 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         return attempt;
     }
 
-    private ExamAttemptResponse resume(VivaAttempt attempt, VivaExam exam, LocalDateTime now) {
-        if (attempt.getStatus() == AttemptStatus.COMPLETED || !now.isBefore(attempt.getDeadlineAt())) {
-            throw new BusinessException(ErrorCode.EXAM_ATTEMPT_FINISHED);
-        }
-        return examMapper.toAttemptResponse(attempt, exam, now);
+    private VivaAttempt findLatestAttempt(String examId, String studentId) {
+        return attemptRepository.findFirstByExam_IdAndStudentIdOrderByAttemptNoDesc(examId, studentId).orElse(null);
+    }
+
+    /** Luot thi con dang lam: chua bam ket thuc va chua het gio. */
+    private boolean isRunning(VivaAttempt attempt, LocalDateTime now) {
+        return attempt.getStatus() == AttemptStatus.IN_PROGRESS && now.isBefore(attempt.getDeadlineAt());
     }
 
     private BusinessException lockedException(long lockedSeconds) {

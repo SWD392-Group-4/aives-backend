@@ -1,7 +1,7 @@
 package com.aives.common.security;
 
 import com.aives.modules.auth.entity.User;
-import com.aives.modules.auth.enums.Role;
+import com.aives.modules.auth.enums.RoleName;
 import java.util.Collection;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -20,16 +20,19 @@ public class UserPrincipal implements UserDetails {
     private final String id;
     private final String email;
     private final String passwordHash;
-    private final Role role;
+    private final RoleName role;
     private final boolean active;
+    // true: dang dung mat khau tam, chi duoc goi /api/auth/** cho den khi doi mat khau
+    private final boolean mustChangePassword;
 
     public static UserPrincipal from(User user) {
         return new UserPrincipal(
                 user.getId(),
                 user.getEmail(),
                 user.getPasswordHash(),
-                user.getRole(),
-                user.isActive());
+                user.getRoleName(),
+                user.isActive(),
+                user.isMustChangePassword());
     }
 
     @Override

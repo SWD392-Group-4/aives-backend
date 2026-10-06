@@ -21,7 +21,8 @@ import lombok.Setter;
 
 /**
  * Luot thi cua 1 sinh vien trong 1 phien thi (VIVA_ATTEMPT trong ERD).
- * Moi sinh vien chi co 1 luot / phien. Thoi gian luu theo gio UTC.
+ * Moi sinh vien co toi da viva_exams.max_attempts luot / phien, danh so bang attempt_no (1, 2, 3...).
+ * Thoi gian luu theo gio UTC.
  */
 @Entity
 // Cot khoa chinh trong DB ten la viva_attempts_id (BaseEntity mac dinh la "id")
@@ -31,8 +32,8 @@ import lombok.Setter;
 @Table(
         name = "viva_attempts",
         uniqueConstraints = @UniqueConstraint(
-                name = "UQ_viva_attempts_exam_student",
-                columnNames = {"viva_exams_id", "student_id"}))
+                name = "UQ_viva_attempts_exam_student_no",
+                columnNames = {"viva_exams_id", "student_id", "attempt_no"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -48,6 +49,11 @@ public class VivaAttempt extends BaseEntity {
     // Chi luu id vi User thuoc module auth
     @Column(name = "student_id", nullable = false, length = 20)
     private String studentId;
+
+    // Luot thi thu may cua sinh vien nay trong phien (bat dau tu 1)
+    @Builder.Default
+    @Column(name = "attempt_no", nullable = false)
+    private Integer attemptNo = 1;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

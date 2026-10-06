@@ -6,6 +6,7 @@ Backend của **AIVES – AI-powered Viva Exam System** (Spring Boot Monolith).
 - Java 21, Spring Boot 3.5, Maven
 - Spring Web, Validation, Spring Data JPA, Spring Security + JWT
 - Swagger (springdoc-openapi)
+- Spring Mail (gửi mật khẩu tạm khi admin tạo tài khoản)
 - Microsoft SQL Server (profile `sqlserver`, mặc định) / H2 in-memory (profile `dev`)
 
 ## Cấu trúc
@@ -19,15 +20,20 @@ src/main/java/com/aives/
 │   ├── dto/         # ApiResponse<T>
 │   ├── entity/      # BaseEntity (id, createdAt, updatedAt)
 │   └── controller/  # HealthController
+├── integration/
+│   └── mail/        # MailService (interface), SmtpMailService (gửi thật), LogOnlyMailService (chỉ in ra console)
 └── modules/
-    ├── auth/        # controller, dto, entity, enums, mapper, repository, service, service/impl, util
+    ├── auth/        # users + roles: controller, dto, entity, enums, mapper, repository, service, service/impl, util
     ├── content/     # (chưa làm)
     ├── exam/        # phiên thi (viva_exams) + lượt thi của sinh viên (viva_attempts)
     └── vivaroom/    # (chưa làm)
 ```
 
 ## Chạy local
-1. Chạy `database/00_init_aives.sql` trong SSMS: script tự tạo database `aives` và 3 bảng `users`, `viva_exams`, `viva_attempts` (cái nào đã có thì bỏ qua). Database tạo theo các bản script cũ thì chạy thêm theo thứ tự `03_alter_users.sql`, `04_viva_exams_id_as_code.sql`, `05_rename_viva_attempts_fk.sql`. Quy ước tên: khoá chính `<tên bảng>_id`; khoá ngoại mang đúng tên khoá chính nó trỏ tới, trừ khoá ngoại theo vai trò (`lecturer_id`, `student_id`).
+1. Tạo database:
+   - **Máy chưa có database**: chạy `database/00_init_aives.sql` trong SSMS. Script tự tạo database `aives` và đủ 17 bảng (bảng nào đã có thì bỏ qua), kèm 3 dòng của bảng `roles`.
+   - **Database đã có từ trước** (bảng `users` còn cột `role`): chạy `06_roles.sql` rồi `07_exam_max_attempts.sql` **trước khi chạy backend bản mới**, sau đó chạy `00_init_aives.sql` để tạo nốt các bảng còn thiếu. Database tạo theo các bản script cũ hơn nữa thì chạy trước theo thứ tự `03_alter_users.sql`, `04_viva_exams_id_as_code.sql`, `05_rename_viva_attempts_fk.sql`.
+   - Quy ước tên: khoá chính `<tên bảng>_id`; khoá ngoại mang đúng tên khoá chính nó trỏ tới (`users.roles_id`, `viva_attempts.viva_exams_id`), trừ khoá ngoại theo vai trò (`lecturer_id`, `student_id`...).
 2. Khai báo tài khoản DB trong `application-sqlserver.yml` (hoặc biến môi trường `DB_USERNAME`, `DB_PASSWORD`, `DB_URL`).
 3. Mở project bằng IntelliJ, chờ Maven tải dependency, chạy `AivesApplication`.
 4. Lần chạy đầu, `DataInitializer` tự tạo dữ liệu mẫu khi bảng `users` còn trống: 1 admin, 2 lecturer, 7 student
@@ -35,6 +41,27 @@ src/main/java/com/aives/
 5. Mở Swagger: http://localhost:8080/swagger-ui.html, gọi `POST /api/auth/login`, copy `accessToken`, bấm **Authorize** rồi dán vào.
 
 Máy chưa cài SQL Server: chạy với profile `dev` (H2 in-memory) bằng biến môi trường `SPRING_PROFILES_ACTIVE=dev`.
+
+## Role và tài khoản
+- Bảng `roles` tách riêng khỏi `users`: `roles(roles_id, name, description)` với 3 dòng `AD` / `LE` / `ST`. Mỗi user có đúng 1 role qua khoá ngoại `users.roles_id`. `DataInitializer` tự thêm role còn thiếu mỗi lần khởi động.
+- Trong code: entity `Role` (bảng `roles`) và enum `RoleName` (`ADMIN`, `LECTURER`, `STUDENT`). API vẫn trả `"role": "ADMIN"` như trước nên FE không phải đổi.
+- **Admin tạo tài khoản** (`POST /api/admin/users`): không nhập mật khẩu. Hệ thống sinh mật khẩu tạm 10 ký tự, gửi tới email của người dùng, và đặt `users.must_change_password = 1`. Gửi mail thất bại thì tài khoản **không** được tạo (lỗi `MAIL_SEND_FAILED`).
+- Tài khoản đang dùng mật khẩu tạm chỉ gọi được `/api/auth/**`; API khác trả 403 `PASSWORD_CHANGE_REQUIRED` cho tới khi đổi mật khẩu (`PUT /api/auth/me/password`). Mật khẩu mới phải khác mật khẩu hiện tại.
+- Sinh viên tự đăng ký (`POST /api/auth/register`) vẫn tự đặt mật khẩu, không gửi mail.
+
+## Cấu hình gửi mail
+Khai báo trong file `.env` (xem `.env.example`) hoặc biến môi trường:
+
+| Biến | Ý nghĩa |
+| :--- | :--- |
+| `MAIL_ENABLED` | `false` (mặc định): **không gửi mail**, nội dung email (có mật khẩu tạm) chỉ in ra console của backend, API trả `emailSent = false`. `true`: gửi thật qua SMTP. |
+| `MAIL_HOST`, `MAIL_PORT` | Mặc định `smtp.gmail.com`, `587` (STARTTLS). |
+| `MAIL_USERNAME` | Địa chỉ dùng để gửi (vd tài khoản Gmail của nhóm). |
+| `MAIL_PASSWORD` | Với Gmail là **App Password** 16 ký tự (bật xác minh 2 bước rồi tạo tại https://myaccount.google.com/apppasswords), không phải mật khẩu đăng nhập Gmail. |
+| `MAIL_FROM` | Địa chỉ hiện ở ô người gửi, mặc định bằng `MAIL_USERNAME`. |
+| `FRONTEND_URL` | Dùng để chèn link đăng nhập vào email, mặc định `http://localhost:5173`. |
+
+Không commit file `.env` (đã có trong `.gitignore`).
 
 ## Quy tắc id của user
 `users.users_id` = 2 chữ cái theo role + 6 chữ số ngẫu nhiên, do `UserIdGenerator` sinh:
@@ -51,9 +78,10 @@ Máy chưa cài SQL Server: chạy với profile `dev` (H2 in-memory) bằng bi�
 | PUT | `/api/auth/me` | Đã đăng nhập (sửa họ tên) |
 | PUT | `/api/auth/me/password` | Đã đăng nhập |
 | GET | `/api/admin/users` | ADMIN |
-| POST | `/api/admin/users` | ADMIN (tạo ADMIN / LECTURER / STUDENT) |
+| POST | `/api/admin/users` | ADMIN (tạo ADMIN / LECTURER / STUDENT; body `email`, `fullName`, `role`; trả `{ user, emailSent }`) |
+| PUT | `/api/admin/users/{id}/status` | ADMIN (vô hiệu hoá / kích hoạt lại) |
 | DELETE | `/api/admin/users/{id}` | ADMIN |
-| POST | `/api/exam-sessions` | LECTURER / ADMIN (tạo phiên, trả về mã phiên + mã truy cập) |
+| POST | `/api/exam-sessions` | LECTURER / ADMIN (tạo phiên, trả về mã phiên + mã truy cập; `maxAttempts` 1–10, mặc định 1) |
 | GET | `/api/exam-sessions?status=&keyword=&page=&size=` | LECTURER (phiên của mình) / ADMIN (mọi phiên) |
 | GET | `/api/exam-sessions/{id}` | Người tạo phiên / ADMIN |
 | PUT | `/api/exam-sessions/{id}` | Người tạo phiên / ADMIN |
@@ -68,10 +96,14 @@ Máy chưa cài SQL Server: chạy với profile `dev` (H2 in-memory) bằng bi�
 - **Thời gian**: API nhận ISO-8601 có múi giờ (vd `2026-10-10T08:00:00+07:00`), DB lưu giờ UTC.
 - **Trạng thái** tính từ thời gian, không lưu cứng: `UPCOMING` → `ONGOING` → `ENDED`; chỉ `CANCELLED` được lưu (cột `cancelled_at`).
 - **Ràng buộc khi tạo**: giờ đóng sau giờ mở; giờ mở không ở quá khứ và không xa quá 365 ngày; mở tối đa 30 ngày; thời lượng 5–300 phút và không dài hơn khoảng mở.
-- **Sửa**: chưa mở thì sửa tự do; đã mở chỉ sửa tên, mô tả và kéo dài giờ đóng; đã kết thúc hoặc đã huỷ thì không sửa.
+- **Số lượt thi** (`maxAttempts`, cột `viva_exams.max_attempts`): số lượt thi tối đa của mỗi sinh viên trong phiên, từ 1 đến 10, mặc định 1.
+- **Sửa**: chưa mở thì sửa tự do; đã mở chỉ sửa tên, mô tả, kéo dài giờ đóng và tăng số lượt thi; đã kết thúc hoặc đã huỷ thì không sửa.
 - **Xoá**: chưa có sinh viên vào thì xoá hẳn; đã có thì chuyển sang `CANCELLED`; đã kết thúc và có sinh viên thì không xoá.
-- **Vào thi**: sinh viên nhập mã phiên + mã truy cập. Hạn làm bài = `min(lúc vào + thời lượng, giờ đóng phiên)`, chốt ở server; vào lại nhận đúng lượt thi cũ.
+- **Vào thi**: sinh viên nhập mã phiên + mã truy cập. Hạn làm bài = `min(lúc vào + thời lượng, giờ đóng phiên)`, chốt ở server.
+  - Đang có lượt thi chưa xong: nhận lại đúng lượt đó, đồng hồ không chạy lại.
+  - Lượt trước đã kết thúc hoặc hết giờ và còn lượt: tạo lượt thi mới (`viva_attempts.attempt_no` tăng 1), đồng hồ chạy lại từ đầu. Phiên phải còn mở.
+  - Đã dùng hết `maxAttempts` lượt: lỗi 409 `EXAM_ATTEMPT_LIMIT_REACHED`.
 - **Chống dò mã**: sai 5 lần trong 10 phút thì khoá tài khoản sinh viên đó khỏi việc vào thi cho đến khi lần sai cũ nhất hết hạn (bộ đếm lưu trong RAM).
 
 ## Test
-`mvn test` chạy `ExamSessionApiTest` trên H2 (profile `dev`), không cần SQL Server.
+`mvn test` chạy `ExamSessionApiTest` (phiên thi, lượt thi) và `AdminUserApiTest` (bảng roles, tạo tài khoản + gửi mail, bắt đổi mật khẩu) trên H2 (profile `dev`), không cần SQL Server và không gửi mail thật.

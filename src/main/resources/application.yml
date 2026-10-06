@@ -9,6 +9,24 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  # SMTP de gui email (mat khau tam khi admin tao tai khoan). Chi duoc dung khi app.mail.enabled = true.
+  # Gmail: MAIL_USERNAME = dia chi gmail, MAIL_PASSWORD = App Password 16 ky tu (KHONG phai mat khau dang nhap gmail).
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          # Khong de request tao tai khoan treo lau khi SMTP khong phan hoi (ms)
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
 
 server:
   port: ${SERVER_PORT:8080}
@@ -20,6 +38,14 @@ app:
     access-token-expiration-minutes: 60
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  # Dia chi FE, dung de chen link dang nhap vao email
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  mail:
+    # false (mac dinh): KHONG gui email, chi in noi dung ra console cua backend (de dev khi chua co SMTP).
+    # true: gui that qua SMTP o muc spring.mail phia tren.
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:${MAIL_USERNAME:no-reply@aives.local}}
+    from-name: AIVES
   seed:
     admin:
       email: ${ADMIN_EMAIL:admin@aives.local}

@@ -4,13 +4,19 @@ import com.aives.common.exception.BusinessException;
 import com.aives.common.exception.ErrorCode;
 import com.aives.modules.auth.dto.ChangePasswordRequest;
 import com.aives.modules.auth.dto.CreateUserRequest;
+import com.aives.modules.auth.dto.CreatedUserResponse;
+import com.aives.modules.auth.dto.RegisterRequest;
 import com.aives.modules.auth.dto.UpdateProfileRequest;
 import com.aives.modules.auth.dto.UserResponse;
+import com.aives.modules.auth.entity.Role;
 import com.aives.modules.auth.entity.User;
-import com.aives.modules.auth.enums.Role;
+import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.mapper.UserMapper;
+import com.aives.modules.auth.repository.RoleRepository;
 import com.aives.modules.auth.repository.UserRepository;
+import com.aives.modules.auth.service.AccountMailService;
 import com.aives.modules.auth.service.UserService;
+import com.aives.modules.auth.util.TempPasswordGenerator;
 import com.aives.modules.auth.util.UserIdGenerator;
 import java.util.Collection;
 import java.util.List;
@@ -27,9 +33,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final UserIdGenerator userIdGenerator;
+    private final TempPasswordGenerator tempPasswordGenerator;
+    private final AccountMailService accountMailService;
 
     @Override
     @Transactional(readOnly = true)
@@ -58,24 +67,25 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public UserResponse createUser(CreateUserRequest request) {
-        String email = request.getEmail().trim().toLowerCase();
-        if (userRepository.existsByEmail(email)) {
-            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
-        }
-
-        Role role = request.getRole();
-
-        User user = User.builder()
-                .email(email)
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .fullName(request.getFullName().trim())
-                .role(role)
-                .active(true)
-                .build();
-        user.setId(userIdGenerator.generate(role));
-
+    public UserResponse registerStudent(RegisterRequest request) {
+        User user = newUser(request.getEmail(), request.getFullName(), RoleName.STUDENT, request.getPassword(), false);
         return userMapper.toResponse(userRepository.save(user));
+    }
+
+    /**
+     * Mat khau tam chi ton tai trong email gui cho nguoi dung: DB chi luu ban ma hoa,
+     * API khong tra ve. Gui mail that bai thi nem loi -> transaction rollback, tai khoan khong duoc tao
+     * (tranh co tai khoan ma khong ai biet mat khau).
+     */
+    @Override
+    @Transactional
+    public CreatedUserResponse createUser(CreateUserRequest request) {
+        String temporaryPassword = tempPasswordGenerator.generate();
+        User user = newUser(request.getEmail(), request.getFullName(), request.getRole(), temporaryPassword, true);
+        User saved = userRepository.saveAndFlush(user);
+
+        boolean emailSent = accountMailService.sendAccountCreated(saved, temporaryPassword);
+        return new CreatedUserResponse(userMapper.toResponse(saved), emailSent);
     }
 
     @Override
@@ -93,7 +103,12 @@ public class UserServiceImpl implements UserService {
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new BusinessException(ErrorCode.WRONG_CURRENT_PASSWORD);
         }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new BusinessException(ErrorCode.NEW_PASSWORD_SAME_AS_CURRENT);
+        }
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        // Da tu dat mat khau rieng thi khong con bi bat doi nua
+        user.setMustChangePassword(false);
         userRepository.save(user);
     }
 
@@ -116,6 +131,27 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.CANNOT_DELETE_SELF);
         }
         userRepository.delete(findUser(userId));
+    }
+
+    private User newUser(String rawEmail, String fullName, RoleName roleName, String rawPassword, boolean mustChangePassword) {
+        String email = rawEmail.trim().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL_ERROR,
+                        "Thiếu role " + roleName + " trong bảng roles"));
+
+        User user = User.builder()
+                .email(email)
+                .passwordHash(passwordEncoder.encode(rawPassword))
+                .fullName(fullName.trim())
+                .role(role)
+                .active(true)
+                .mustChangePassword(mustChangePassword)
+                .build();
+        user.setId(userIdGenerator.generate(roleName));
+        return user;
     }
 
     private User findUser(String userId) {

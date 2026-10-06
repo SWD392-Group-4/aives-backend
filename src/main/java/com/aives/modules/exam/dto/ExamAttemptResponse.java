@@ -24,6 +24,9 @@ public class ExamAttemptResponse {
     private String examId;
     private String title;
     private int durationMinutes;
+    // Day la luot thi thu may cua sinh vien, tren toi da bao nhieu luot
+    private int attemptNo;
+    private int maxAttempts;
     private AttemptStatus status;
     private Instant startedAt;
     private Instant deadlineAt;

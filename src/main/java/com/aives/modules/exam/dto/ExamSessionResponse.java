@@ -28,13 +28,15 @@ public class ExamSessionResponse {
     private Instant startAt;
     private Instant endAt;
     private int durationMinutes;
+    // So luot thi toi da cua moi sinh vien
+    private int maxAttempts;
     private ExamSessionStatus status;
 
     // Nguoi tao phien
     private String ownerId;
     private String ownerName;
 
-    // So sinh vien da vao phien
+    // Tong so luot thi da tao trong phien (1 sinh vien thi 2 lan tinh la 2)
     private long attemptCount;
 
     // true: phien da mo, chi con sua duoc ten, mo ta va keo dai gio dong

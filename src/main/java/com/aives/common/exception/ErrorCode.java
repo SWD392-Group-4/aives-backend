@@ -12,6 +12,7 @@ public enum ErrorCode {
     CANNOT_DELETE_SELF(HttpStatus.BAD_REQUEST, "Không thể tự xoá tài khoản đang đăng nhập"),
     CANNOT_DISABLE_SELF(HttpStatus.BAD_REQUEST, "Không thể tự vô hiệu hoá tài khoản đang đăng nhập"),
     WRONG_CURRENT_PASSWORD(HttpStatus.BAD_REQUEST, "Mật khẩu hiện tại không đúng"),
+    NEW_PASSWORD_SAME_AS_CURRENT(HttpStatus.BAD_REQUEST, "Mật khẩu mới phải khác mật khẩu hiện tại"),
     EXAM_TIME_RANGE_INVALID(HttpStatus.BAD_REQUEST, "Thời gian đóng phiên phải sau thời gian mở phiên"),
     EXAM_START_IN_PAST(HttpStatus.BAD_REQUEST, "Thời gian mở phiên không được ở quá khứ"),
     EXAM_START_TOO_FAR(HttpStatus.BAD_REQUEST, "Thời gian mở phiên không được xa quá 365 ngày"),
@@ -26,6 +27,7 @@ public enum ErrorCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Email hoặc mật khẩu không đúng"),
     ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "Tài khoản đã bị khoá"),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "Không có quyền truy cập"),
+    PASSWORD_CHANGE_REQUIRED(HttpStatus.FORBIDDEN, "Bạn đang dùng mật khẩu tạm, vui lòng đổi mật khẩu trước khi tiếp tục"),
 
     // 404 / 409
     NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy tài nguyên"),
@@ -40,12 +42,14 @@ public enum ErrorCode {
     EXAM_SESSION_LOCKED_FIELDS(HttpStatus.CONFLICT, "Phiên thi đã mở nên không thể đổi thời gian mở phiên và thời lượng làm bài"),
     EXAM_END_CANNOT_SHORTEN(HttpStatus.CONFLICT, "Phiên thi đã mở nên chỉ có thể kéo dài thời gian đóng phiên"),
     EXAM_SESSION_HAS_ATTEMPTS(HttpStatus.CONFLICT, "Phiên thi đã kết thúc và có sinh viên tham gia nên không thể xoá"),
-    EXAM_ATTEMPT_FINISHED(HttpStatus.CONFLICT, "Bạn đã kết thúc bài thi hoặc đã hết thời gian làm bài của phiên thi này"),
+    EXAM_MAX_ATTEMPTS_CANNOT_REDUCE(HttpStatus.CONFLICT, "Phiên thi đã mở nên chỉ có thể tăng số lượt thi tối đa"),
+    EXAM_ATTEMPT_LIMIT_REACHED(HttpStatus.CONFLICT, "Bạn đã dùng hết số lượt thi của phiên thi này"),
 
     // 429
     EXAM_JOIN_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "Bạn đã nhập sai quá nhiều lần, vui lòng thử lại sau"),
 
-    // 500
+    // 500 / 502
+    MAIL_SEND_FAILED(HttpStatus.BAD_GATEWAY, "Không gửi được email. Vui lòng kiểm tra địa chỉ email và cấu hình gửi mail rồi thử lại"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống");
 
     private final HttpStatus status;

@@ -63,7 +63,7 @@ public class ExamSessionController {
         return ApiResponse.ok(examSessionService.getSession(id, principal));
     }
 
-    @Operation(summary = "Sửa phiên thi. Phiên đã mở chỉ sửa được tên, mô tả và kéo dài giờ đóng")
+    @Operation(summary = "Sửa phiên thi. Phiên đã mở chỉ sửa được tên, mô tả, kéo dài giờ đóng và tăng số lượt thi tối đa")
     @PutMapping("/{id}")
     public ApiResponse<ExamSessionResponse> updateSession(
             @PathVariable String id,

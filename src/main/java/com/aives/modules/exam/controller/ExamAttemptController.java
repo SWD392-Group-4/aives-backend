@@ -28,7 +28,7 @@ public class ExamAttemptController {
 
     private final ExamAttemptService examAttemptService;
 
-    @Operation(summary = "Vào phiên thi bằng mã phiên + mã truy cập. Vào lại thì nhận đúng lượt thi cũ")
+    @Operation(summary = "Vào phiên thi bằng mã phiên + mã truy cập. Đang có lượt thi chưa xong thì nhận lại đúng lượt đó; đã xong và còn lượt thì tạo lượt thi mới")
     @PostMapping("/join")
     public ApiResponse<ExamAttemptResponse> joinSession(
             @Valid @RequestBody JoinExamRequest request,
@@ -44,7 +44,7 @@ public class ExamAttemptController {
         return ApiResponse.ok(examAttemptService.getAttempt(attemptId, principal.getId()));
     }
 
-    @Operation(summary = "Kết thúc bài thi trước khi hết giờ. Sau đó không vào lại phiên này được nữa")
+    @Operation(summary = "Kết thúc bài thi trước khi hết giờ. Muốn thi lại phải còn lượt thi (maxAttempts của phiên)")
     @PostMapping("/attempts/{attemptId}/finish")
     public ApiResponse<ExamAttemptResponse> finishAttempt(
             @PathVariable String attemptId,
