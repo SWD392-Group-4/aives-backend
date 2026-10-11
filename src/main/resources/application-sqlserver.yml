@@ -2,9 +2,9 @@
 spring:
   datasource:
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    url: ${DB_URL:${SPRING_DATASOURCE_URL:jdbc:sqlserver://localhost:1433;databaseName=aives;encrypt=true;trustServerCertificate=true}}
-    username: ${DB_USERNAME:${SPRING_DATASOURCE_USERNAME:sa}}
-    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:123456}}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     hikari:
       pool-name: AivesHikariMSSQL
       maximum-pool-size: 10

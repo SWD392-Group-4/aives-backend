@@ -1,5 +1,6 @@
 package com.aives.common.config;
 
+import java.util.List;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -12,6 +13,9 @@ import org.springframework.context.annotation.Configuration;
  * Swagger UI: http://localhost:8080/swagger-ui.html
  * Bam nut "Authorize" va dan accessToken lay tu API login.
  */
+import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.web.filter.ForwardedHeaderFilter;
+
 @Configuration
 public class OpenApiConfig {
 
@@ -20,6 +24,7 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI aivesOpenApi() {
         return new OpenAPI()
+                .servers(List.of(new Server().url("/").description("Current Server Context")))
                 .info(new Info()
                         .title("AIVES API")
                         .version("v1")
@@ -31,5 +36,10 @@ public class OpenApiConfig {
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")));
+    }
+
+    @Bean
+    public ForwardedHeaderFilter forwardedHeaderFilter() {
+        return new ForwardedHeaderFilter();
     }
 }
