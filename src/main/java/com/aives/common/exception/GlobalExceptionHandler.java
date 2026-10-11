@@ -13,9 +13,13 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 @Slf4j
 @RestControllerAdvice
@@ -49,6 +53,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.status(ErrorCode.BAD_REQUEST.getStatus())
                 .body(ApiResponse.error(ErrorCode.BAD_REQUEST, "Tham số '" + ex.getName() + "' không hợp lệ"));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUploadTooLarge(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(ErrorCode.IMPORT_FILE_TOO_LARGE.getStatus())
+                .body(ApiResponse.error(ErrorCode.IMPORT_FILE_TOO_LARGE));
+    }
+
+    // Thieu file hoac thieu tham so bat buoc cua request
+    @ExceptionHandler({MissingServletRequestPartException.class, MissingServletRequestParameterException.class,
+            MultipartException.class})
+    public ResponseEntity<ApiResponse<Void>> handleMissingPart(Exception ex) {
+        return ResponseEntity.status(ErrorCode.VALIDATION_ERROR.getStatus())
+                .body(ApiResponse.error(ErrorCode.VALIDATION_ERROR, "Thiếu file hoặc tham số bắt buộc"));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

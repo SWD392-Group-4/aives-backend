@@ -2,6 +2,8 @@ package com.aives.modules.auth.service;
 
 import com.aives.modules.auth.dto.ChangePasswordRequest;
 import com.aives.modules.auth.dto.CreateUserRequest;
+import com.aives.modules.auth.dto.CreatedUserResponse;
+import com.aives.modules.auth.dto.RegisterRequest;
 import com.aives.modules.auth.dto.UpdateProfileRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import java.util.Collection;
@@ -17,7 +19,14 @@ public interface UserService {
     /** Tra ve map id -> ho ten. Id khong ton tai thi khong co trong map. Dung cho module khac hien ten user. */
     Map<String, String> getFullNamesByIds(Collection<String> userIds);
 
-    UserResponse createUser(CreateUserRequest request);
+    /** Tra ve map id -> thong tin user (ho ten, email...). Id khong ton tai thi khong co trong map. */
+    Map<String, UserResponse> getUsersByIds(Collection<String> userIds);
+
+    /** Sinh vien tu dang ky: role luon la STUDENT, mat khau do nguoi dung tu dat. */
+    UserResponse registerStudent(RegisterRequest request);
+
+    /** Admin tao tai khoan: he thong sinh mat khau tam va gui toi email cua nguoi dung. */
+    CreatedUserResponse createUser(CreateUserRequest request);
 
     UserResponse updateProfile(String userId, UpdateProfileRequest request);
 

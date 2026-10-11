@@ -1,0 +1,5 @@
+# Chi ap dung khi chay test (duoc nap them ben canh src/main/resources/application.yml).
+app:
+  grading:
+    # Test tu goi cham diem khi can, khong de bo cham ngam chay song song lam ket qua thay doi bat ngo
+    auto-enabled: false

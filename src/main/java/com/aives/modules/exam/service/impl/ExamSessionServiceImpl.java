@@ -4,7 +4,7 @@ import com.aives.common.dto.PageResponse;
 import com.aives.common.exception.BusinessException;
 import com.aives.common.exception.ErrorCode;
 import com.aives.common.security.UserPrincipal;
-import com.aives.modules.auth.enums.Role;
+import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.service.UserService;
 import com.aives.modules.exam.dto.DeleteExamSessionResponse;
 import com.aives.modules.exam.dto.ExamSessionRequest;
@@ -72,6 +72,7 @@ public class ExamSessionServiceImpl implements ExamSessionService {
                 .description(normalizeDescription(request.getDescription()))
                 .passcode(codeGenerator.generatePasscode())
                 .durationMinutes(request.getDurationMinutes())
+                .maxAttempts(request.getMaxAttempts() == null ? 1 : request.getMaxAttempts())
                 .startAt(startAt)
                 .endAt(endAt)
                 .build();
@@ -89,7 +90,7 @@ public class ExamSessionServiceImpl implements ExamSessionService {
 
         // LECTURER chi thay phien cua minh, ADMIN thay tat ca
         Specification<VivaExam> spec = (root, query, cb) -> cb.conjunction();
-        if (actor.getRole() != Role.ADMIN) {
+        if (actor.getRole() != RoleName.ADMIN) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("lecturerId"), actor.getId()));
         }
         if (StringUtils.hasText(keyword)) {
@@ -138,6 +139,8 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         VivaExam exam = findAccessible(sessionId, actor);
         LocalDateTime startAt = toUtc(request.getStartAt());
         LocalDateTime endAt = toUtc(request.getEndAt());
+        // Khong gui maxAttempts thi giu nguyen gia tri dang co
+        int maxAttempts = request.getMaxAttempts() == null ? exam.getMaxAttempts() : request.getMaxAttempts();
 
         switch (examMapper.statusOf(exam, now)) {
             case CANCELLED -> throw new BusinessException(ErrorCode.EXAM_SESSION_CANCELLED,
@@ -145,7 +148,8 @@ public class ExamSessionServiceImpl implements ExamSessionService {
             case ENDED -> throw new BusinessException(ErrorCode.EXAM_SESSION_ENDED,
                     "Phiên thi đã kết thúc nên không thể chỉnh sửa");
             case ONGOING -> {
-                // Phien da mo: sinh vien co the dang thi, chi cho sua ten, mo ta va KEO DAI gio dong
+                // Phien da mo: sinh vien co the dang thi, chi cho sua ten, mo ta, KEO DAI gio dong
+                // va TANG so luot thi toi da
                 if (!startAt.equals(exam.getStartAt()) || request.getDurationMinutes() != exam.getDurationMinutes()) {
                     throw new BusinessException(ErrorCode.EXAM_SESSION_LOCKED_FIELDS);
                 }
@@ -154,6 +158,10 @@ public class ExamSessionServiceImpl implements ExamSessionService {
                 }
                 if (Duration.between(startAt, endAt).compareTo(MAX_WINDOW) > 0) {
                     throw new BusinessException(ErrorCode.EXAM_WINDOW_TOO_LONG);
+                }
+                // Giam so luot khi dang thi se lam sinh vien da thi nhieu hon bi vuot gioi han
+                if (maxAttempts < exam.getMaxAttempts()) {
+                    throw new BusinessException(ErrorCode.EXAM_MAX_ATTEMPTS_CANNOT_REDUCE);
                 }
             }
             case UPCOMING -> validateNewSchedule(startAt, endAt, request.getDurationMinutes(), now);
@@ -164,6 +172,7 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         exam.setStartAt(startAt);
         exam.setEndAt(endAt);
         exam.setDurationMinutes(request.getDurationMinutes());
+        exam.setMaxAttempts(maxAttempts);
         return toResponse(examRepository.save(exam), now);
     }
 
@@ -250,7 +259,7 @@ public class ExamSessionServiceImpl implements ExamSessionService {
     private VivaExam findAccessible(String sessionId, UserPrincipal actor) {
         VivaExam exam = examRepository.findById(sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_SESSION_NOT_FOUND));
-        if (actor.getRole() != Role.ADMIN && !exam.getLecturerId().equals(actor.getId())) {
+        if (actor.getRole() != RoleName.ADMIN && !exam.getLecturerId().equals(actor.getId())) {
             throw new BusinessException(ErrorCode.ACCESS_DENIED, "Bạn chỉ được thao tác trên phiên thi do mình tạo");
         }
         return exam;

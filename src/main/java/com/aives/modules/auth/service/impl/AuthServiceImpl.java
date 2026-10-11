@@ -5,13 +5,11 @@ import com.aives.common.exception.ErrorCode;
 import com.aives.common.security.JwtTokenProvider;
 import com.aives.common.security.TokenBlacklist;
 import com.aives.common.security.UserPrincipal;
-import com.aives.modules.auth.dto.CreateUserRequest;
 import com.aives.modules.auth.dto.LoginRequest;
 import com.aives.modules.auth.dto.LoginResponse;
 import com.aives.modules.auth.dto.RegisterRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.entity.User;
-import com.aives.modules.auth.enums.Role;
 import com.aives.modules.auth.mapper.UserMapper;
 import com.aives.modules.auth.repository.UserRepository;
 import com.aives.modules.auth.service.AuthService;
@@ -38,12 +36,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public UserResponse register(RegisterRequest request) {
         // Tu dang ky thi luon la STUDENT, khong cho client chon role.
-        CreateUserRequest createRequest = new CreateUserRequest(
-                request.getEmail(),
-                request.getPassword(),
-                request.getFullName(),
-                Role.STUDENT);
-        return userService.createUser(createRequest);
+        return userService.registerStudent(request);
     }
 
     @Override

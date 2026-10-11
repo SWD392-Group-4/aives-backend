@@ -14,6 +14,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
@@ -37,7 +38,7 @@ public class RubricCriterion extends BaseEntity {
     private String name;
 
     @Nationalized
-    @Column(name = "description", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "description", nullable = false, length = Length.LONG32)
     private String description;
 
     @Column(name = "weight_percent", nullable = false, precision = 5, scale = 2)

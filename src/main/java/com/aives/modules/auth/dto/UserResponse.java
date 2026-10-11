@@ -1,6 +1,6 @@
 package com.aives.modules.auth.dto;
 
-import com.aives.modules.auth.enums.Role;
+import com.aives.modules.auth.enums.RoleName;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +18,9 @@ public class UserResponse {
     private String id;
     private String email;
     private String fullName;
-    private Role role;
+    private RoleName role;
     private boolean active;
+    // true: dang dung mat khau tam do admin cap, FE phai dua user toi man hinh doi mat khau
+    private boolean mustChangePassword;
     private LocalDateTime createdAt;
 }

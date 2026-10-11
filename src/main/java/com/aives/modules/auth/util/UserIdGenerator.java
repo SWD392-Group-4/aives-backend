@@ -2,7 +2,7 @@ package com.aives.modules.auth.util;
 
 import com.aives.common.exception.BusinessException;
 import com.aives.common.exception.ErrorCode;
-import com.aives.modules.auth.enums.Role;
+import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.repository.UserRepository;
 import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ public class UserIdGenerator {
     private final SecureRandom random = new SecureRandom();
     private final UserRepository userRepository;
 
-    public String generate(Role role) {
+    public String generate(RoleName role) {
         for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             String id = role.getIdPrefix() + String.format("%06d", random.nextInt(1_000_000));
             // Trung id thi random lai

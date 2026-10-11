@@ -2,12 +2,34 @@ spring:
   application:
     name: aives-backend
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE}
+    active: ${SPRING_PROFILES_ACTIVE:sqlserver}
+    default: sqlserver
+  servlet:
+    multipart:
+      # File cau hoi giang vien gui len (pdf / docx / txt)
+      max-file-size: 10MB
+      max-request-size: 12MB
   jpa:
     open-in-view: false
     properties:
       hibernate:
         format_sql: true
+  # SMTP de gui email (mat khau tam khi admin tao tai khoan). Chi duoc dung khi app.mail.enabled = true.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 10000
+          writetimeout: 10000
 
 server:
   port: ${SERVER_PORT:8080}
@@ -18,8 +40,27 @@ app:
     secret: ${JWT_SECRET}
     access-token-expiration-minutes: 60
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:${MAIL_USERNAME:no-reply@aives.local}}
+    from-name: AIVES
+  ai:
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-3.8-flash}
+      read-timeout-ms: ${GEMINI_TIMEOUT_MS:20000}
+      long-read-timeout-ms: ${GEMINI_LONG_TIMEOUT_MS:120000}
+      thinking-level: ${GEMINI_THINKING_LEVEL:low}
+      thinking-budget: ${GEMINI_THINKING_BUDGET:-1}
+  viva:
+    default-question-count: ${VIVA_DEFAULT_QUESTION_COUNT:3}
+  grading:
+    auto-enabled: ${GRADING_AUTO_ENABLED:true}
+    poll-interval-ms: ${GRADING_POLL_INTERVAL_MS:5000}
   seed:
+    sample-content: ${SEED_SAMPLE_CONTENT:true}
     admin:
       email: ${ADMIN_EMAIL}
       password: ${ADMIN_PASSWORD}

@@ -3,6 +3,7 @@ package com.aives.modules.auth.controller;
 import com.aives.common.dto.ApiResponse;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.auth.dto.CreateUserRequest;
+import com.aives.modules.auth.dto.CreatedUserResponse;
 import com.aives.modules.auth.dto.UpdateUserStatusRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.service.UserService;
@@ -40,11 +41,15 @@ public class AdminUserController {
         return ApiResponse.ok(userService.getAllUsers());
     }
 
-    @Operation(summary = "Tạo account mới (ADMIN / LECTURER / STUDENT). Lecturer chỉ tạo được ở đây")
+    @Operation(summary = "Tạo account mới (ADMIN / LECTURER / STUDENT). Hệ thống tự sinh mật khẩu tạm và gửi tới email của người dùng")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
-        return ApiResponse.ok("Tạo account thành công", userService.createUser(request));
+    public ApiResponse<CreatedUserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
+        CreatedUserResponse created = userService.createUser(request);
+        String message = created.isEmailSent()
+                ? "Tạo account thành công, thông tin đăng nhập đã được gửi tới " + created.getUser().getEmail()
+                : "Tạo account thành công nhưng hệ thống chưa bật gửi mail: mật khẩu tạm chỉ được in ở console của backend";
+        return ApiResponse.ok(message, created);
     }
 
     @Operation(summary = "Vô hiệu hoá / kích hoạt lại account theo id (active = false là vô hiệu hoá)")

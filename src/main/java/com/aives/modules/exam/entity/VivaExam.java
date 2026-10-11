@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 import org.hibernate.annotations.Nationalized;
 
 /**
@@ -51,6 +52,11 @@ public class VivaExam extends BaseEntity {
     @Column(name = "duration_minutes", nullable = false)
     private int durationMinutes;
 
+    // So luot thi toi da cua MOI sinh vien trong phien nay (1 = chi duoc thi 1 lan)
+    @Builder.Default
+    @Column(name = "max_attempts", nullable = false)
+    private Integer maxAttempts = 1;
+
     @Builder.Default
     @Column(name = "max_follow_up_per_question", nullable = false)
     private Integer maxFollowUpPerQuestion = 2;
@@ -63,7 +69,7 @@ public class VivaExam extends BaseEntity {
     @Column(name = "answer_seconds", nullable = false)
     private Integer answerSeconds = 120;
 
-    @Column(name = "domain_keywords", columnDefinition = "TEXT")
+    @Column(name = "domain_keywords", length = Length.LONG32)
     private String domainKeywords;
 
     @Column(name = "start_at", nullable = false)

@@ -123,6 +123,8 @@ class ExamSessionApiTest {
                 .andExpect(jsonPath("$.data.title").value("Vấn đáp giữa kỳ"))
                 .andExpect(jsonPath("$.data.status").value("UPCOMING"))
                 .andExpect(jsonPath("$.data.durationMinutes").value(60))
+                // Khong gui maxAttempts thi mac dinh moi sinh vien chi duoc thi 1 lan
+                .andExpect(jsonPath("$.data.maxAttempts").value(1))
                 .andExpect(jsonPath("$.data.attemptCount").value(0))
                 .andExpect(jsonPath("$.data.scheduleLocked").value(false))
                 .andExpect(jsonPath("$.data.ownerName").isNotEmpty())
@@ -377,7 +379,7 @@ class ExamSessionApiTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.data.remainingSeconds").value(0));
-        expectError(join(student(1), code, passcode), 409, "EXAM_ATTEMPT_FINISHED");
+        expectError(join(student(1), code, passcode), 409, "EXAM_ATTEMPT_LIMIT_REACHED");
     }
 
     @Test
@@ -462,7 +464,97 @@ class ExamSessionApiTest {
                 .andExpect(jsonPath("$.data.remainingSeconds").value(0));
 
         // Da ket thuc thi khong vao lai duoc, du con thoi gian
-        expectError(join(student(2), code, passcode), 409, "EXAM_ATTEMPT_FINISHED");
+        expectError(join(student(2), code, passcode), 409, "EXAM_ATTEMPT_LIMIT_REACHED");
+    }
+
+    /* ========================= GIOI HAN SO LUOT THI ========================= */
+
+    @Test
+    void create_rejectsInvalidMaxAttempts() throws Exception {
+        Instant start = clock.instant().plus(1, ChronoUnit.HOURS);
+        for (int invalid : new int[] {0, -1, 11}) {
+            Map<String, Object> body = body("Phiên", start, start.plus(2, ChronoUnit.HOURS), 30);
+            body.put("maxAttempts", invalid);
+            create(LECTURER_1, body)
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                    .andExpect(jsonPath("$.data.maxAttempts").isNotEmpty());
+        }
+    }
+
+    @Test
+    void join_allowsRetakeUntilMaxAttemptsIsUsedUp() throws Exception {
+        Instant start = clock.instant().plus(1, ChronoUnit.HOURS);
+        Instant end = start.plus(5, ChronoUnit.HOURS);
+        Map<String, Object> body = body("Phiên thi 2 lượt", start, end, 60);
+        body.put("maxAttempts", 2);
+        JsonNode session = createAndGet(LECTURER_1, body);
+        assertThat(session.get("maxAttempts").asInt()).isEqualTo(2);
+        String code = session.get("id").asText();
+        String passcode = session.get("passcode").asText();
+
+        // Luot 1
+        clock.set(start);
+        JsonNode first = data(join(student(3), code, passcode).andExpect(status().isOk()));
+        assertThat(first.get("attemptNo").asInt()).isEqualTo(1);
+        assertThat(first.get("maxAttempts").asInt()).isEqualTo(2);
+
+        // Dang thi ma vao lai: van la luot 1, khong ton them luot
+        clock.advance(Duration.ofMinutes(5));
+        join(student(3), code, passcode)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.attemptId").value(first.get("attemptId").asText()))
+                .andExpect(jsonPath("$.data.attemptNo").value(1))
+                .andExpect(jsonPath("$.data.remainingSeconds").value(3300));
+
+        // Ket thuc luot 1 roi vao lai: tao luot 2, dong ho chay lai tu dau
+        mockMvc.perform(auth(post(SESSIONS + "/attempts/" + first.get("attemptId").asText() + "/finish"), student(3)))
+                .andExpect(status().isOk());
+        clock.advance(Duration.ofMinutes(5));
+        JsonNode second = data(join(student(3), code, passcode).andExpect(status().isOk()));
+        assertThat(second.get("attemptId").asText()).isNotEqualTo(first.get("attemptId").asText());
+        assertThat(second.get("attemptNo").asInt()).isEqualTo(2);
+        assertThat(second.get("remainingSeconds").asInt()).isEqualTo(3600);
+
+        // Luot 1 van xem lai duoc va giu trang thai da ket thuc
+        mockMvc.perform(auth(get(SESSIONS + "/attempts/" + first.get("attemptId").asText()), student(3)))
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.attemptNo").value(1));
+
+        // Luot 2 het gio (khong bam ket thuc): da dung het 2/2 luot
+        clock.advance(Duration.ofMinutes(61));
+        expectError(join(student(3), code, passcode), 409, "EXAM_ATTEMPT_LIMIT_REACHED");
+
+        // Sinh vien khac khong bi anh huong, va giang vien thay tong 3 luot thi
+        join(student(4), code, passcode)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.attemptNo").value(1));
+        mockMvc.perform(auth(get(SESSIONS + "/" + code), LECTURER_1))
+                .andExpect(jsonPath("$.data.attemptCount").value(3));
+
+        // Phien da mo: tang so luot thi duoc, giam thi khong
+        body.put("maxAttempts", 1);
+        expectError(mockMvc.perform(json(auth(put(SESSIONS + "/" + code), LECTURER_1), body)),
+                409, "EXAM_MAX_ATTEMPTS_CANNOT_REDUCE");
+        body.put("maxAttempts", 3);
+        mockMvc.perform(json(auth(put(SESSIONS + "/" + code), LECTURER_1), body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.maxAttempts").value(3));
+        // Sua ma khong gui maxAttempts thi giu nguyen
+        body.remove("maxAttempts");
+        mockMvc.perform(json(auth(put(SESSIONS + "/" + code), LECTURER_1), body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.maxAttempts").value(3));
+
+        // Co them luot nen sinh vien 3 vao thi tiep duoc: luot 3
+        join(student(3), code, passcode)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.attemptNo").value(3))
+                .andExpect(jsonPath("$.data.maxAttempts").value(3));
+
+        // Het gio mo phien thi du con luot cung khong vao duoc
+        clock.set(end.plusSeconds(1));
+        expectError(join(student(4), code, passcode), 409, "EXAM_SESSION_ENDED");
     }
 
     @Test

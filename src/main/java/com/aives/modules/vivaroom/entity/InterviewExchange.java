@@ -16,6 +16,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.Length;
 import org.hibernate.annotations.Nationalized;
 
 @Entity
@@ -47,14 +48,14 @@ public class InterviewExchange extends BaseEntity {
     private Integer depth = 0;
 
     @Nationalized
-    @Column(name = "question_text", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "question_text", nullable = false, length = Length.LONG32)
     private String questionText;
 
     @Column(name = "question_audio_key", length = 500)
     private String questionAudioKey;
 
     @Nationalized
-    @Column(name = "transcript", columnDefinition = "TEXT")
+    @Column(name = "transcript", length = Length.LONG32)
     private String transcript;
 
     @Column(name = "answer_audio_key", length = 500)
@@ -67,7 +68,7 @@ public class InterviewExchange extends BaseEntity {
     private String aiDecision;
 
     @Nationalized
-    @Column(name = "ai_decision_reason", columnDefinition = "TEXT")
+    @Column(name = "ai_decision_reason", length = Length.LONG32)
     private String aiDecisionReason;
 
     @Column(name = "answer_started_at")
