@@ -2,76 +2,103 @@
 
 Backend của **AIVES – AI-powered Viva Exam System** (Spring Boot Monolith).
 
-## Stack
-- Java 21, Spring Boot 3.5, Maven
-- Spring Web, Validation, Spring Data JPA, Spring Security + JWT
-- Swagger (springdoc-openapi)
-- Microsoft SQL Server (profile `sqlserver`, mặc định) / H2 in-memory (profile `dev`)
+---
 
-## Cấu trúc
+## 🛠️ Yêu cầu môi trường (Prerequisites)
+* **Java:** JDK 17 hoặc JDK 21
+* **Maven:** 3.8+ (hoặc dùng Maven Wrapper kèm theo `./mvnw`)
+* **Database:** Microsoft SQL Server (database tên `aives`)
+
+---
+
+## 🚀 Hướng dẫn Cài đặt & Khởi chạy nhanh (Quick Start)
+
+### Bước 1: Chuẩn bị file biến môi trường (`.env`)
+> ⚠️ **LƯU Ý QUAN TRỌNG:** Backend có cơ chế kiểm tra môi trường nghiêm ngặt. Nếu **chưa có `.env`** hoặc **thiếu biến quan trọng**, ứng dụng sẽ **dừng ngay từ đầu** và hiển thị cảnh báo chi tiết.
+
+1. Tại thư mục `aives-backend`, copy file mẫu:
+   ```bash
+   cp .env.example .env
+   # Trên Windows PowerShell:
+   Copy-Item .env.example .env
+   ```
+2. Mở file `.env` vừa tạo và điền mật khẩu SQL Server của máy bạn:
+   ```env
+   DB_PASSWORD=mật_khẩu_sql_server_của_bạn
+   ```
+   *(Các biến khác như `JWT_SECRET`, `DB_USERNAME=sa`, `DB_URL` đã có giá trị mặc định sẵn sàng để chạy).*
+
+### Bước 2: Chuẩn bị Database
+Tạo database `aives` trên SQL Server rồi chạy các script trong thư mục `database/`:
+1. `database/01_create_users.sql` (Tạo bảng users và dữ liệu mẫu)
+2. `database/02_create_exam_sessions.sql` (Tạo bảng ca thi)
+
+### Bước 3: Khởi chạy ứng dụng
+Chạy lệnh:
+```bash
+mvn spring-boot:run
 ```
+Ứng dụng sẽ khởi động tại: `http://localhost:8080`.
+
+---
+
+## 🌐 Chia sẻ API Backend cho Frontend & Mobile qua Tunnel
+
+Khi test Mobile (hoặc cho bạn bè trong team test từ xa), máy điện thoại **không thể gọi `localhost:8080`**. Bạn chọn **1 trong 2 giải pháp** sau:
+
+### ⭐ Lựa chọn 1: Dùng Port Forwarding của VS Code (Dễ nhất - Không cần cài đặt gì thêm)
+> Thích hợp cho tất cả mọi người có cài VS Code. Không cần đăng ký tài khoản ngoài.
+
+1. Mở thư mục dự án bằng **VS Code**.
+2. Nhìn xuống bảng điều khiển bên dưới (cạnh tab Terminal), chọn tab **Ports**.
+3. Bấm **Forward a Port** (hoặc dấu `+`) ➔ Nhập `8080`.
+4. Chuột phải vào dòng port `8080` vừa tạo ➔ **Port Visibility** ➔ Chọn **Public**.
+5. Copy đường dẫn trong cột **Forwarded Address** (VD: `https://xxxx-8080.asse.devtunnels.ms`).
+6. Cung cấp URL này cho Mobile hoặc Frontend:
+   * URL API sẽ là: `https://xxxx-8080.asse.devtunnels.ms/api`
+   * Swagger UI: `https://xxxx-8080.asse.devtunnels.ms/swagger-ui/index.html`
+
+---
+
+### ⭐ Lựa chọn 2: Dùng Ngrok (Cực kỳ ổn định - Không cần mở VS Code)
+> Thích hợp khi bạn dùng IntelliJ IDEA, Eclipse hoặc chạy thuần Terminal.
+
+1. Tải và cài đặt Ngrok tại: [ngrok.com](https://ngrok.com) (Đăng ký tài khoản free để lấy authtoken).
+2. Thêm authtoken vào máy (chỉ làm 1 lần duy nhất):
+   ```bash
+   ngrok config add-authtoken <TOKEN_CỦA_BẠN>
+   ```
+3. Mở một cửa sổ Terminal mới và chạy lệnh mở tunnel cho port 8080:
+   ```bash
+   ngrok http 8080
+   ```
+4. Copy đường dẫn `Forwarding` HTTPS sinh ra (VD: `https://xxxx.ngrok-free.app`).
+5. Cung cấp URL này cho Mobile hoặc Frontend:
+   * URL API: `https://xxxx.ngrok-free.app/api`
+   * Swagger UI: `https://xxxx.ngrok-free.app/swagger-ui/index.html`
+
+---
+
+## 📖 Tài liệu API (Swagger UI)
+Sau khi chạy backend:
+* **Chạy local:** [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
+* **Tài khoản test nhanh:**
+  * **Sinh viên:** `testmobile@fpt.edu.vn` / Mật khẩu: `Password@123`
+  * **Giảng viên:** `lamnn@fe.edu.vn` / Mật khẩu: `Aives@123`
+  * **Quản trị viên:** `admin@aives.local` / Mật khẩu: `Admin@123`
+
+---
+
+## 🏗️ Cấu trúc Dự án
+```text
 src/main/java/com/aives/
-├── AivesApplication.java
+├── AivesApplication.java # Chứa cơ chế tự động nạp & thẩm định file .env khi khởi động
 ├── common/
-│   ├── config/      # SecurityConfig, CorsConfig, OpenApiConfig, JpaAuditingConfig, DataInitializer
-│   ├── security/    # JwtTokenProvider, JwtAuthFilter, UserPrincipal, TokenBlacklist...
-│   ├── exception/   # ErrorCode, BusinessException, GlobalExceptionHandler
-│   ├── dto/         # ApiResponse<T>
-│   ├── entity/      # BaseEntity (id, createdAt, updatedAt)
-│   └── controller/  # HealthController
+│   ├── config/           # SecurityConfig, CorsConfig, OpenApiConfig, DataInitializer
+│   ├── security/         # JwtTokenProvider, JwtAuthFilter
+│   └── exception/        # GlobalExceptionHandler, BusinessException
 └── modules/
-    ├── auth/        # controller, dto, entity, enums, mapper, repository, service, service/impl, util
-    ├── content/     # (chưa làm)
-    ├── exam/        # phiên thi (viva_exams) + lượt thi của sinh viên (viva_attempts)
-    └── vivaroom/    # (chưa làm)
+    ├── auth/             # Đăng ký, đăng nhập, hồ sơ cá nhân
+    ├── exam/             # Quản lý ca thi và lượt thi vấn đáp
+    └── content/          # Ngân hàng câu hỏi & rubric
 ```
-
-## Chạy local
-1. Tạo database `aives` trên SQL Server rồi chạy lần lượt `database/01_users.sql` và `database/02_viva_exams.sql` để tạo bảng. Khoá chính đặt theo tên bảng: `users_id`, `viva_exams_id`, `viva_attempts_id`. Khoá ngoại mang đúng tên khoá chính mà nó trỏ tới (`viva_attempts.viva_exams_id`), trừ khoá ngoại đặt theo vai trò (`lecturer_id`, `student_id`). Database tạo theo các bản script cũ thì chạy tiếp theo thứ tự: `04_viva_exams_id_as_code.sql` (bỏ cột `exam_code`), `05_rename_viva_attempts_fk.sql` (đổi `viva_exam_id` thành `viva_exams_id`). Database đã có bảng `users` kiểu cũ (cột `id`, `student_code`) thì chạy `database/03_alter_users.sql` thay cho `01_users.sql`.
-2. Khai báo tài khoản DB trong `application-sqlserver.yml` (hoặc biến môi trường `DB_USERNAME`, `DB_PASSWORD`, `DB_URL`).
-3. Mở project bằng IntelliJ, chờ Maven tải dependency, chạy `AivesApplication`.
-4. Lần chạy đầu, `DataInitializer` tự tạo dữ liệu mẫu khi bảng `users` còn trống: 1 admin, 2 lecturer, 7 student
-   (email và mật khẩu mẫu xem `DataInitializer` và mục `app.seed` trong `application.yml`).
-5. Mở Swagger: http://localhost:8080/swagger-ui.html, gọi `POST /api/auth/login`, copy `accessToken`, bấm **Authorize** rồi dán vào.
-
-Máy chưa cài SQL Server: chạy với profile `dev` (H2 in-memory) bằng biến môi trường `SPRING_PROFILES_ACTIVE=dev`.
-
-## Quy tắc id của user
-`users.users_id` = 2 chữ cái theo role + 6 chữ số ngẫu nhiên, do `UserIdGenerator` sinh:
-`ADxxxxxx` (ADMIN), `LExxxxxx` (LECTURER), `STxxxxxx` (STUDENT).
-
-## API hiện có
-| Method | Endpoint | Quyền |
-| :--- | :--- | :--- |
-| GET | `/api/health` | Public |
-| POST | `/api/auth/register` | Public (chỉ tạo STUDENT) |
-| POST | `/api/auth/login` | Public |
-| POST | `/api/auth/logout` | Đã đăng nhập |
-| GET | `/api/auth/me` | Đã đăng nhập |
-| PUT | `/api/auth/me` | Đã đăng nhập (sửa họ tên) |
-| PUT | `/api/auth/me/password` | Đã đăng nhập |
-| GET | `/api/admin/users` | ADMIN |
-| POST | `/api/admin/users` | ADMIN (tạo ADMIN / LECTURER / STUDENT) |
-| DELETE | `/api/admin/users/{id}` | ADMIN |
-| POST | `/api/exam-sessions` | LECTURER / ADMIN (tạo phiên, trả về mã phiên + mã truy cập) |
-| GET | `/api/exam-sessions?status=&keyword=&page=&size=` | LECTURER (phiên của mình) / ADMIN (mọi phiên) |
-| GET | `/api/exam-sessions/{id}` | Người tạo phiên / ADMIN |
-| PUT | `/api/exam-sessions/{id}` | Người tạo phiên / ADMIN |
-| DELETE | `/api/exam-sessions/{id}` | Người tạo phiên / ADMIN (đã có sinh viên vào thì chỉ huỷ) |
-| POST | `/api/exam-sessions/{id}/regenerate-passcode` | Người tạo phiên / ADMIN |
-| POST | `/api/exam-sessions/join` | STUDENT (nhập mã phiên + mã truy cập) |
-| GET | `/api/exam-sessions/attempts/{attemptId}` | STUDENT chủ lượt thi |
-| POST | `/api/exam-sessions/attempts/{attemptId}/finish` | STUDENT chủ lượt thi (kết thúc bài thi trước khi hết giờ) |
-
-## Phiên thi (module `exam`)
-- **Mã phiên** chính là khoá chính `viva_exams_id`: `AIVES_EXAM_yyyy_xxxxxx` (yyyy là năm tạo, 6 số ngẫu nhiên, không trùng); không có cột `exam_code` riêng. Sinh viên gửi mã này ở field `examId` khi vào thi. **Mã truy cập**: 6 chữ số, dùng chung cho cả phiên, người tạo xem lại và tạo lại được.
-- **Thời gian**: API nhận ISO-8601 có múi giờ (vd `2026-10-10T08:00:00+07:00`), DB lưu giờ UTC.
-- **Trạng thái** tính từ thời gian, không lưu cứng: `UPCOMING` → `ONGOING` → `ENDED`; chỉ `CANCELLED` được lưu (cột `cancelled_at`).
-- **Ràng buộc khi tạo**: giờ đóng sau giờ mở; giờ mở không ở quá khứ và không xa quá 365 ngày; mở tối đa 30 ngày; thời lượng 5–300 phút và không dài hơn khoảng mở.
-- **Sửa**: chưa mở thì sửa tự do; đã mở chỉ sửa tên, mô tả và kéo dài giờ đóng; đã kết thúc hoặc đã huỷ thì không sửa.
-- **Xoá**: chưa có sinh viên vào thì xoá hẳn; đã có thì chuyển sang `CANCELLED`; đã kết thúc và có sinh viên thì không xoá.
-- **Vào thi**: sinh viên nhập mã phiên + mã truy cập. Hạn làm bài = `min(lúc vào + thời lượng, giờ đóng phiên)`, chốt ở server; vào lại nhận đúng lượt thi cũ.
-- **Chống dò mã**: sai 5 lần trong 10 phút thì khoá tài khoản sinh viên đó khỏi việc vào thi cho đến khi lần sai cũ nhất hết hạn (bộ đếm lưu trong RAM).
-
-## Test
-`mvn test` chạy `ExamSessionApiTest` trên H2 (profile `dev`), không cần SQL Server.
