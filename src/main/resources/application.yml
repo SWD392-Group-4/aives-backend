@@ -66,6 +66,9 @@ app:
       password: ${ADMIN_PASSWORD}
       full-name: System Admin
     default-password: ${SEED_DEFAULT_PASSWORD}
+  tunnel:
+    cloudflare:
+      enabled: ${CLOUDFLARE_TUNNEL_ENABLED:true}
 
 springdoc:
   swagger-ui:

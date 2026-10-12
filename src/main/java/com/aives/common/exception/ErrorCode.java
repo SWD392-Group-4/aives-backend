@@ -27,6 +27,9 @@ public enum ErrorCode {
     IMPORT_NO_RUBRICS(HttpStatus.BAD_REQUEST, "Không tìm thấy rubric (tiêu chí chấm điểm) nào trong file"),
     GRADE_SCORE_INVALID(HttpStatus.BAD_REQUEST, "Điểm không hợp lệ"),
     GRADE_NOTE_REQUIRED(HttpStatus.BAD_REQUEST, "Điểm chốt lệch quá 2 điểm so với điểm AI gợi ý nên bắt buộc nhập ghi chú giải trình (ít nhất 5 ký tự)"),
+    OTP_INVALID(HttpStatus.BAD_REQUEST, "Mã xác thực OTP không đúng"),
+    OTP_EXPIRED(HttpStatus.BAD_REQUEST, "Mã xác thực OTP đã hết hạn, vui lòng gửi lại mã mới"),
+    OTP_NOT_FOUND(HttpStatus.BAD_REQUEST, "Không tìm thấy yêu cầu xác thực OTP cho email này"),
 
     // 401 / 403
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Chưa đăng nhập hoặc token không hợp lệ"),
@@ -67,6 +70,8 @@ public enum ErrorCode {
 
     // 429
     EXAM_JOIN_LOCKED(HttpStatus.TOO_MANY_REQUESTS, "Bạn đã nhập sai quá nhiều lần, vui lòng thử lại sau"),
+    OTP_MAX_ATTEMPTS_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng yêu cầu mã mới"),
+    OTP_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "Vui lòng đợi 60 giây trước khi yêu cầu gửi lại mã OTP"),
 
     // 500 / 502 / 503
     AI_REQUEST_FAILED(HttpStatus.BAD_GATEWAY, "AI không xử lý được yêu cầu, vui lòng thử lại"),

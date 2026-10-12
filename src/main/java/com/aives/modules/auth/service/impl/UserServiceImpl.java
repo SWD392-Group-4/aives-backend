@@ -10,11 +10,13 @@ import com.aives.modules.auth.dto.UpdateProfileRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.entity.Role;
 import com.aives.modules.auth.entity.User;
+import com.aives.modules.auth.enums.OtpType;
 import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.mapper.UserMapper;
 import com.aives.modules.auth.repository.RoleRepository;
 import com.aives.modules.auth.repository.UserRepository;
 import com.aives.modules.auth.service.AccountMailService;
+import com.aives.modules.auth.service.OtpService;
 import com.aives.modules.auth.service.UserService;
 import com.aives.modules.auth.util.TempPasswordGenerator;
 import com.aives.modules.auth.util.UserIdGenerator;
@@ -39,6 +41,7 @@ public class UserServiceImpl implements UserService {
     private final UserIdGenerator userIdGenerator;
     private final TempPasswordGenerator tempPasswordGenerator;
     private final AccountMailService accountMailService;
+    private final OtpService otpService;
 
     @Override
     @Transactional(readOnly = true)
@@ -78,6 +81,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserResponse registerStudent(RegisterRequest request) {
+        otpService.verifyAndConsumeOtp(request.getEmail(), request.getOtp(), OtpType.REGISTRATION);
         User user = newUser(request.getEmail(), request.getFullName(), RoleName.STUDENT, request.getPassword(), false);
         return userMapper.toResponse(userRepository.save(user));
     }

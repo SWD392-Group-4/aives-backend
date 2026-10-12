@@ -34,4 +34,9 @@ public class RegisterRequest {
     @NotBlank(message = "Họ tên không được để trống")
     @Size(max = 150, message = "Họ tên tối đa 150 ký tự")
     private String fullName;
+
+    @Schema(example = "123456", description = "Mã OTP 6 số đã gửi qua email")
+    @NotBlank(message = "Mã OTP không được để trống")
+    @jakarta.validation.constraints.Pattern(regexp = "^[0-9]{6}$", message = "Mã OTP gồm đúng 6 chữ số")
+    private String otp;
 }

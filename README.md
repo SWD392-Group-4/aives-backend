@@ -51,40 +51,32 @@ mvn spring-boot:run
 
 ---
 
-## 🌐 Chia sẻ API Backend cho Frontend & Mobile qua Tunnel
+## 🌐 Chia sẻ API Backend cho Mobile & Thiết bị ngoài qua Cloudflare Tunnel
 
-Khi test Mobile (hoặc cho bạn bè trong team test từ xa), máy điện thoại **không thể gọi `localhost:8080`**. Bạn chọn **1 trong 2 giải pháp** sau:
+Khi test Mobile (hoặc cho bạn bè trong team test từ xa), máy điện thoại **không thể gọi `localhost:8080`**. Backend hiện đã tích hợp **Tự động mở Cloudflare Tunnel**:
 
-### ⭐ Lựa chọn 1: Dùng Port Forwarding của VS Code (Dễ nhất - Không cần cài đặt gì thêm)
-> Thích hợp cho tất cả mọi người có cài VS Code. Không cần đăng ký tài khoản ngoài.
+### ⭐ Lựa chọn 1: Cloudflare Tunnel (Tự động 100% - Khuyên dùng)
+> Không cần đăng ký tài khoản, không cần authtoken, băng thông không giới hạn, không có trang cảnh báo trình duyệt.
 
-1. Mở thư mục dự án bằng **VS Code**.
-2. Nhìn xuống bảng điều khiển bên dưới (cạnh tab Terminal), chọn tab **Ports**.
-3. Bấm **Forward a Port** (hoặc dấu `+`) ➔ Nhập `8080`.
-4. Chuột phải vào dòng port `8080` vừa tạo ➔ **Port Visibility** ➔ Chọn **Public**.
-5. Copy đường dẫn trong cột **Forwarded Address** (VD: `https://xxxx-8080.asse.devtunnels.ms`).
-6. Cung cấp URL này cho Mobile hoặc Frontend:
-   * URL API sẽ là: `https://xxxx-8080.asse.devtunnels.ms/api`
-   * Swagger UI: `https://xxxx-8080.asse.devtunnels.ms/swagger-ui/index.html`
+1. Đảm bảo máy đã cài đặt Cloudflare Tunnel CLI (chỉ cài 1 lần):
+   ```powershell
+   winget install --id Cloudflare.cloudflared
+   ```
+2. Khởi chạy Backend như bình thường:
+   ```bash
+   mvn spring-boot:run
+   ```
+3. **Cơ chế tự động:**
+   * Backend tự động phát hiện và khởi chạy `cloudflared` cho port `8080`.
+   * Cloudflare cấp phát URL công khai ngẫu nhiên dạng: `https://<random>.trycloudflare.com`.
+   * Backend **tự động cập nhật `EXPO_PUBLIC_API_URL` vào file `aives-mobile/.env`**! Bạn **không cần copy-paste thủ công**.
+   * Khi bạn dừng Backend (Ctrl+C), tiến trình tunnel cũng sẽ tự động được dọn dẹp sạch sẽ.
 
 ---
 
-### ⭐ Lựa chọn 2: Dùng Ngrok (Cực kỳ ổn định - Không cần mở VS Code)
-> Thích hợp khi bạn dùng IntelliJ IDEA, Eclipse hoặc chạy thuần Terminal.
-
-1. Tải và cài đặt Ngrok tại: [ngrok.com](https://ngrok.com) (Đăng ký tài khoản free để lấy authtoken).
-2. Thêm authtoken vào máy (chỉ làm 1 lần duy nhất):
-   ```bash
-   ngrok config add-authtoken <TOKEN_CỦA_BẠN>
-   ```
-3. Mở một cửa sổ Terminal mới và chạy lệnh mở tunnel cho port 8080:
-   ```bash
-   ngrok http 8080
-   ```
-4. Copy đường dẫn `Forwarding` HTTPS sinh ra (VD: `https://xxxx.ngrok-free.app`).
-5. Cung cấp URL này cho Mobile hoặc Frontend:
-   * URL API: `https://xxxx.ngrok-free.app/api`
-   * Swagger UI: `https://xxxx.ngrok-free.app/swagger-ui/index.html`
+### ⭐ Lựa chọn 2: Port Forwarding của VS Code hoặc Ngrok (Thủ công)
+* **VS Code:** Tab **Ports** -> Forward port `8080` -> Public -> Copy link `asse.devtunnels.ms`.
+* **Ngrok:** Chạy `ngrok http 8080` -> Copy link `ngrok-free.app` dán vào `.env` của mobile.
 
 ---
 

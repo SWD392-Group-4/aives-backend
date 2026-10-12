@@ -6,9 +6,11 @@ import com.aives.modules.auth.dto.ChangePasswordRequest;
 import com.aives.modules.auth.dto.LoginRequest;
 import com.aives.modules.auth.dto.LoginResponse;
 import com.aives.modules.auth.dto.RegisterRequest;
+import com.aives.modules.auth.dto.SendOtpRequest;
 import com.aives.modules.auth.dto.UpdateProfileRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.service.AuthService;
+import com.aives.modules.auth.service.OtpService;
 import com.aives.modules.auth.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,6 +38,15 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
+    private final OtpService otpService;
+
+    @Operation(summary = "Gửi mã OTP xác thực email (cho luồng đăng ký sinh viên)")
+    @SecurityRequirements // API nay khong can token
+    @PostMapping("/send-otp")
+    public ApiResponse<Void> sendOtp(@Valid @RequestBody SendOtpRequest request) {
+        otpService.sendRegistrationOtp(request.getEmail());
+        return ApiResponse.ok("Mã xác thực OTP đã được gửi đến email của bạn", null);
+    }
 
     @Operation(summary = "Sinh viên tự đăng ký tài khoản (role luôn là STUDENT)")
     @SecurityRequirements // API nay khong can token
