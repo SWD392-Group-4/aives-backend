@@ -22,6 +22,7 @@ import com.aives.modules.content.repository.TopicRepository;
 import com.aives.modules.content.service.ContentService;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,16 +82,46 @@ public class ContentServiceImpl implements ContentService {
             return List.of();
         }
         Map<String, Integer> questionCounts = new HashMap<>();
+        Map<String, Integer> approvedCounts = new HashMap<>();
         for (Question question : questionRepository.findWithTopicByLessonIds(lessonIds)) {
             questionCounts.merge(question.getTopic().getId(), 1, Integer::sum);
+            if (APPROVED.equals(question.getStatus())) {
+                approvedCounts.merge(question.getTopic().getId(), 1, Integer::sum);
+            }
         }
         List<TopicResponse> result = new ArrayList<>();
         for (Topic topic : topicRepository.findWithLessonByLessonIds(lessonIds)) {
             if (lessonId == null || lessonId.isBlank() || lessonId.equals(topic.getLesson().getId())) {
-                result.add(contentMapper.toTopicResponse(topic, questionCounts.getOrDefault(topic.getId(), 0)));
+                result.add(contentMapper.toTopicResponse(topic,
+                        questionCounts.getOrDefault(topic.getId(), 0),
+                        approvedCounts.getOrDefault(topic.getId(), 0)));
             }
         }
         return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TopicResponse> getTopicsByIds(UserPrincipal actor, Collection<String> topicIds) {
+        if (topicIds == null || topicIds.isEmpty()) {
+            return List.of();
+        }
+        return listTopics(actor, null).stream()
+                .filter(topic -> topicIds.contains(topic.getId()))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, String> getTopicNames(Collection<String> topicIds) {
+        Map<String, String> names = new HashMap<>();
+        if (topicIds == null || topicIds.isEmpty()) {
+            return names;
+        }
+        for (Topic topic : topicRepository.findAllById(topicIds)) {
+            names.put(topic.getId(), topic.getName());
+        }
+        return names;
     }
 
     @Override

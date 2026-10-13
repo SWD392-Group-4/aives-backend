@@ -3,6 +3,7 @@ package com.aives.modules.exam.dto;
 import com.aives.modules.exam.enums.ExamSessionStatus;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,6 +33,11 @@ public class ExamSessionResponse {
     private int maxAttempts;
     private ExamSessionStatus status;
 
+    // So cau hoi goc cua phien. null = so mac dinh cua he thong
+    private Integer questionCount;
+    // Chu de lay cau hoi. Rong = phien tao truoc khi co chuc nang chon chu de
+    private List<TopicItem> topics;
+
     // Nguoi tao phien
     private String ownerId;
     private String ownerName;
@@ -43,4 +49,13 @@ public class ExamSessionResponse {
     private boolean scheduleLocked;
 
     private LocalDateTime createdAt;
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TopicItem {
+        private String id;
+        private String name;
+    }
 }

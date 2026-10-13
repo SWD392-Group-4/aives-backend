@@ -36,6 +36,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -264,10 +268,11 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
     }
 
     /**
-     * Phien thi chua co cau hoi nao thi tu gan cau hoi APPROVED vao phien, theo thu tu uu tien:
-     *   1. Cau hoi cua chinh nguoi tao phien, bo cau hoi (chu de) moi nhat truoc.
-     *   2. Nguoi tao phien chua co cau hoi nao da duyet thi lay cac cau APPROVED cu nhat trong he thong (du lieu mau).
-     * Day la giai phap tam cho toi khi co chuc nang giang vien chon cau hoi cho phien thi.
+     * Lan dau co sinh vien bat dau, phien thi chua co cau hoi nao thi gan cau hoi APPROVED vao phien
+     * (moi sinh vien cua phien thi cung 1 bo cau hoi):
+     *   - Phien co chon chu de: boc ngau nhien question_count cau tu cac chu de do, chia deu giua cac chu de.
+     *   - Phien khong chon chu de (phien cu): cau hoi cua nguoi tao phien, bo cau hoi moi nhat truoc;
+     *     nguoi tao phien chua co cau nao da duyet thi lay cac cau APPROVED cu nhat trong he thong.
      */
     private void assignDefaultQuestionsIfEmpty(String examId) {
         if (examQuestionRepository.countByExam_Id(examId) > 0) {
@@ -278,12 +283,19 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
                 if (examQuestionRepository.countByExam_Id(examId) > 0) {
                     return;
                 }
-                PageRequest limit = PageRequest.of(0, Math.max(defaultQuestionCount, 1));
                 VivaExam exam = examRepository.findById(examId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_SESSION_NOT_FOUND));
-                List<Question> picked = questionRepository.findByOwnerAndStatus(exam.getLecturerId(), QUESTION_APPROVED, limit);
-                if (picked.isEmpty()) {
-                    picked = questionRepository.findByStatusOrderByCreatedAtAscIdAsc(QUESTION_APPROVED, limit);
+                int count = exam.getQuestionCount() != null ? exam.getQuestionCount() : Math.max(defaultQuestionCount, 1);
+                List<Question> picked;
+                if (!exam.getTopicIds().isEmpty()) {
+                    // Giang vien da chon chu de: boc ngau nhien, chia deu giua cac chu de
+                    picked = pickRandomFromTopics(exam.getTopicIds(), count);
+                } else {
+                    PageRequest limit = PageRequest.of(0, count);
+                    picked = questionRepository.findByOwnerAndStatus(exam.getLecturerId(), QUESTION_APPROVED, limit);
+                    if (picked.isEmpty()) {
+                        picked = questionRepository.findByStatusOrderByCreatedAtAscIdAsc(QUESTION_APPROVED, limit);
+                    }
                 }
                 int orderNo = 1;
                 for (Question question : picked) {
@@ -302,6 +314,30 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
             // 2 sinh vien vao cung luc: request kia da gan cau hoi truoc (dung UNIQUE exam + order_no)
             log.debug("Cau hoi cua phien {} da duoc request khac gan truoc", examId);
         }
+    }
+
+    /** Boc ngau nhien toi da count cau APPROVED: lan luot moi chu de 1 cau cho toi khi du hoac het cau. */
+    private List<Question> pickRandomFromTopics(Collection<String> topicIds, int count) {
+        Map<String, List<Question>> byTopic = new LinkedHashMap<>();
+        for (Question question : questionRepository.findByTopic_IdInAndStatus(topicIds, QUESTION_APPROVED)) {
+            byTopic.computeIfAbsent(question.getTopic().getId(), key -> new ArrayList<>()).add(question);
+        }
+        List<List<Question>> groups = new ArrayList<>(byTopic.values());
+        Collections.shuffle(groups);
+        groups.forEach(Collections::shuffle);
+
+        List<Question> picked = new ArrayList<>();
+        boolean added = true;
+        for (int round = 0; added && picked.size() < count; round++) {
+            added = false;
+            for (List<Question> group : groups) {
+                if (round < group.size() && picked.size() < count) {
+                    picked.add(group.get(round));
+                    added = true;
+                }
+            }
+        }
+        return picked;
     }
 
     private InterviewExchange createExchange(VivaAttempt attempt, VivaExamQuestion examQuestion,

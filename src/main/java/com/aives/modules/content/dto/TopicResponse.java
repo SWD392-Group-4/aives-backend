@@ -18,4 +18,6 @@ public class TopicResponse {
     private String name;
     private String description;
     private int questionCount;
+    // So cau da duyet (APPROVED): chi nhung cau nay moi duoc dua vao phien thi
+    private int approvedQuestionCount;
 }

@@ -29,11 +29,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Chay sau DataInitializer. Tao bo cau hoi mau DE HIEU (Toan lop 6 - 7) de thi thu phong van AI:
- * 1 bai hoc, 1 chu de, 1 rubric (3 tieu chi) va 5 cau hoi da duyet.
- *   - Chi tao khi chua co bai hoc mau nay (nhan biet bang tieu de bai hoc).
- *   - Bo cau hoi mau cu ve kien truc phan mem (neu co) duoc chuyen sang ARCHIVED de phien thi moi khong lay nua.
- * Tat bang SEED_SAMPLE_CONTENT=false.
+ * Chay sau DataInitializer. Quan ly bo cau hoi MAU cua he thong, theo app.seed.sample-content (SEED_SAMPLE_CONTENT):
+ *
+ * true (chi dung cho test tu dong / chay thu tren H2): tao bo cau hoi mau Toan lop 6 - 7
+ *   (1 bai hoc, 1 chu de, 1 rubric 3 tieu chi, 5 cau hoi da duyet) neu chua co; bo mau cu ve kien truc
+ *   phan mem (neu co) duoc chuyen sang ARCHIVED.
+ *
+ * false (mac dinh): KHONG co du lieu mau. Neu database dang co 2 bai hoc mau (nhan biet bang tieu de bai hoc)
+ *   thi XOA HAN: chu de, cau hoi cua chung, va moi luot thi / diem / don phuc khao cua cac phien thi
+ *   da dung cac cau hoi do. Rubric mau duoc giu lai vi cau hoi khac co the dang dung.
  */
 @Slf4j
 @Component
@@ -54,12 +58,13 @@ public class SampleContentInitializer implements CommandLineRunner {
     private final EntityManager entityManager;
     private final TransactionTemplate transactionTemplate;
 
-    @Value("${app.seed.sample-content:true}")
+    @Value("${app.seed.sample-content:false}")
     private boolean enabled;
 
     @Override
     public void run(String... args) {
         if (!enabled) {
+            removeSampleContent();
             return;
         }
         transactionTemplate.executeWithoutResult(status -> archiveOldSample());
@@ -72,11 +77,68 @@ public class SampleContentInitializer implements CommandLineRunner {
             if (sampleQuestionId != null && !vietnameseIsStoredCorrectly(sampleQuestionId)) {
                 // Khong giu lai du lieu mau bi hong chu
                 status.setRollbackOnly();
-                log.error("KHONG tao cau hoi mau vi database KHONG luu duoc tieng Viet co dau (cot noi dung dang la kieu TEXT). "
-                        + "Hay chay script database/08_text_columns_to_nvarchar.sql roi khoi dong lai backend. "
+                log.error("KHONG tao cau hoi mau vi database KHONG luu duoc tieng Viet co dau. "
+                        + "PostgreSQL: tao lai database voi ENCODING 'UTF8'. "
+                        + "SQL Server: chay script database/08_text_columns_to_nvarchar.sql. Sau do khoi dong lai backend. "
                         + "Neu khong, cau hoi va cau tra loi cua sinh vien se bi luu thanh dau '?'.");
             }
         });
+    }
+
+    /**
+     * Xoa han 2 bai hoc mau va moi du lieu phu thuoc. Khong co bai hoc mau thi khong lam gi.
+     * Thu tu xoa di tu bang con len bang cha de khong vi pham khoa ngoai.
+     */
+    public void removeSampleContent() {
+        transactionTemplate.executeWithoutResult(status -> {
+            List<String> lessonIds = entityManager
+                    .createQuery("select l.id from Lesson l where l.title in :titles", String.class)
+                    .setParameter("titles", List.of(SAMPLE_LESSON_TITLE, OLD_SAMPLE_LESSON_TITLE))
+                    .getResultList();
+            if (lessonIds.isEmpty()) {
+                return;
+            }
+            List<String> topicIds = ids("select t.id from Topic t where t.lesson.id in :ids", lessonIds);
+            List<String> questionIds = ids("select q.id from Question q where q.topic.id in :ids", topicIds);
+            // Phien thi da duoc gan cau hoi mau, va cac luot thi cua nhung phien do
+            List<String> examIds = ids("select distinct eq.exam.id from VivaExamQuestion eq where eq.question.id in :ids", questionIds);
+            List<String> attemptIds = ids("select a.id from VivaAttempt a where a.exam.id in :ids", examIds);
+
+            String gradesOfAttempts = "(select qg.id from QuestionGrade qg where qg.attempt.id in :ids)";
+            delete("delete from GradeAppeal ga where ga.questionGrade.id in " + gradesOfAttempts, attemptIds);
+            delete("delete from CriteriaGrade cg where cg.questionGrade.id in " + gradesOfAttempts, attemptIds);
+            delete("delete from QuestionGrade qg where qg.attempt.id in :ids", attemptIds);
+            // Cau hoi xoay tro toi cau truoc do (parent_exchange_id): go lien ket truoc khi xoa
+            delete("update InterviewExchange ie set ie.parentExchange = null where ie.attempt.id in :ids", attemptIds);
+            delete("delete from InterviewExchange ie where ie.attempt.id in :ids", attemptIds);
+            delete("delete from VivaAttempt a where a.id in :ids", attemptIds);
+            // Bo ca bo cau hoi cua phien: phien con dung duoc se tu boc lai cau hoi khi co sinh vien vao thi
+            delete("delete from VivaExamQuestion eq where eq.exam.id in :ids", examIds);
+            if (!topicIds.isEmpty()) {
+                entityManager.createNativeQuery("delete from viva_exam_topics where topics_id in (:ids)")
+                        .setParameter("ids", topicIds)
+                        .executeUpdate();
+            }
+            delete("delete from Question q where q.id in :ids", questionIds);
+            delete("delete from Topic t where t.id in :ids", topicIds);
+            delete("delete from Lesson l where l.id in :ids", lessonIds);
+            entityManager.clear();
+            log.warn("Da XOA du lieu mau: {} bai hoc, {} chu de, {} cau hoi, {} luot thi cua {} phien thi da dung cau hoi mau",
+                    lessonIds.size(), topicIds.size(), questionIds.size(), attemptIds.size(), examIds.size());
+        });
+    }
+
+    private List<String> ids(String jpql, List<String> parentIds) {
+        if (parentIds.isEmpty()) {
+            return List.of();
+        }
+        return entityManager.createQuery(jpql, String.class).setParameter("ids", parentIds).getResultList();
+    }
+
+    private void delete(String jpql, List<String> ids) {
+        if (!ids.isEmpty()) {
+            entityManager.createQuery(jpql).setParameter("ids", ids).executeUpdate();
+        }
     }
 
     private void archiveOldSample() {

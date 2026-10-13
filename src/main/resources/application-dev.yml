@@ -7,3 +7,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+
+app:
+  seed:
+    # H2 trong luc dev / test tu dong: can bo cau hoi mau de thi thu ngay
+    sample-content: ${SEED_SAMPLE_CONTENT:true}
