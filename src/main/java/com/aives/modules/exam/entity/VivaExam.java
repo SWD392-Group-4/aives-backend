@@ -2,10 +2,16 @@ package com.aives.modules.exam.entity;
 
 import com.aives.common.entity.BaseEntity;
 import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -77,6 +83,20 @@ public class VivaExam extends BaseEntity {
 
     @Column(name = "end_at", nullable = false)
     private LocalDateTime endAt;
+
+    // So cau hoi goc cua phien. null = dung so mac dinh (app.viva.default-question-count)
+    @Column(name = "question_count")
+    private Integer questionCount;
+
+    // Chu de giang vien chon cho phien: cau hoi cua phien duoc boc ngau nhien tu cac chu de nay.
+    // Chi luu id vi Topic thuoc module content. Rong = phien cu, lay cau hoi theo cach mac dinh.
+    @Builder.Default
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "viva_exam_topics",
+            joinColumns = @JoinColumn(name = "viva_exams_id", referencedColumnName = "viva_exams_id"))
+    @Column(name = "topics_id", nullable = false, length = 20)
+    private Set<String> topicIds = new LinkedHashSet<>();
 
     // Khac null nghia la phien da bi huy
     @Column(name = "cancelled_at")

@@ -48,6 +48,9 @@ public interface QuestionRepository extends JpaRepository<Question, String> {
             """)
     Optional<Question> findWithTopicById(@Param("id") String id);
 
+    // Cau hoi theo trang thai cua cac chu de (dung de boc cau hoi cho phien thi)
+    List<Question> findByTopic_IdInAndStatus(Collection<String> topicIds, String status);
+
     // Cau hoi theo trang thai thuoc bai hoc co tieu de cho truoc (dung de cat du lieu mau cu)
     List<Question> findByTopic_Lesson_TitleAndStatus(String lessonTitle, String status);
 }

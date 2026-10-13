@@ -6,6 +6,8 @@ import com.aives.common.exception.ErrorCode;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.service.UserService;
+import com.aives.modules.content.dto.TopicResponse;
+import com.aives.modules.content.service.ContentService;
 import com.aives.modules.exam.dto.DeleteExamSessionResponse;
 import com.aives.modules.exam.dto.ExamSessionRequest;
 import com.aives.modules.exam.dto.ExamSessionResponse;
@@ -23,9 +25,11 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +60,7 @@ public class ExamSessionServiceImpl implements ExamSessionService {
     private final ExamCodeGenerator codeGenerator;
     private final ExamMapper examMapper;
     private final UserService userService;
+    private final ContentService contentService;
     private final Clock clock;
 
     @Override
@@ -65,6 +70,8 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         LocalDateTime startAt = toUtc(request.getStartAt());
         LocalDateTime endAt = toUtc(request.getEndAt());
         validateNewSchedule(startAt, endAt, request.getDurationMinutes(), now);
+        Set<String> topicIds = normalizeTopicIds(request.getTopicIds());
+        validateTopics(topicIds, request.getQuestionCount(), actor);
 
         VivaExam exam = VivaExam.builder()
                 .lecturerId(actor.getId())
@@ -73,6 +80,8 @@ public class ExamSessionServiceImpl implements ExamSessionService {
                 .passcode(codeGenerator.generatePasscode())
                 .durationMinutes(request.getDurationMinutes())
                 .maxAttempts(request.getMaxAttempts() == null ? 1 : request.getMaxAttempts())
+                .questionCount(request.getQuestionCount())
+                .topicIds(topicIds)
                 .startAt(startAt)
                 .endAt(endAt)
                 .build();
@@ -114,12 +123,15 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         Set<String> ownerIds = exams.stream().map(VivaExam::getLecturerId).collect(Collectors.toSet());
         Map<String, String> ownerNames = userService.getFullNamesByIds(ownerIds);
         Map<String, Long> attemptCounts = countAttempts(exams);
+        Set<String> allTopicIds = exams.stream().flatMap(exam -> exam.getTopicIds().stream()).collect(Collectors.toSet());
+        Map<String, String> topicNames = contentService.getTopicNames(allTopicIds);
 
         List<ExamSessionResponse> items = exams.stream()
                 .map(exam -> examMapper.toResponse(
                         exam,
                         ownerNames.get(exam.getLecturerId()),
                         attemptCounts.getOrDefault(exam.getId(), 0L),
+                        topicNames,
                         now))
                 .toList();
         return new PageResponse<>(
@@ -141,6 +153,13 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         LocalDateTime endAt = toUtc(request.getEndAt());
         // Khong gui maxAttempts thi giu nguyen gia tri dang co
         int maxAttempts = request.getMaxAttempts() == null ? exam.getMaxAttempts() : request.getMaxAttempts();
+        // Khong gui topicIds / questionCount thi giu nguyen gia tri dang co
+        Set<String> topicIds = request.getTopicIds() == null
+                ? new LinkedHashSet<>(exam.getTopicIds())
+                : normalizeTopicIds(request.getTopicIds());
+        Integer questionCount = request.getQuestionCount() == null ? exam.getQuestionCount() : request.getQuestionCount();
+        boolean questionsChanged = !topicIds.equals(exam.getTopicIds())
+                || !Objects.equals(questionCount, exam.getQuestionCount());
 
         switch (examMapper.statusOf(exam, now)) {
             case CANCELLED -> throw new BusinessException(ErrorCode.EXAM_SESSION_CANCELLED,
@@ -163,8 +182,18 @@ public class ExamSessionServiceImpl implements ExamSessionService {
                 if (maxAttempts < exam.getMaxAttempts()) {
                     throw new BusinessException(ErrorCode.EXAM_MAX_ATTEMPTS_CANNOT_REDUCE);
                 }
+                // Phien da mo: cau hoi co the da duoc gan cho sinh vien dang thi
+                if (questionsChanged) {
+                    throw new BusinessException(ErrorCode.EXAM_SESSION_LOCKED_FIELDS,
+                            "Phiên thi đã mở nên không thể đổi chủ đề và số câu hỏi");
+                }
             }
-            case UPCOMING -> validateNewSchedule(startAt, endAt, request.getDurationMinutes(), now);
+            case UPCOMING -> {
+                validateNewSchedule(startAt, endAt, request.getDurationMinutes(), now);
+                if (questionsChanged) {
+                    validateTopics(topicIds, questionCount, actor);
+                }
+            }
         }
 
         exam.setTitle(request.getTitle().trim());
@@ -173,6 +202,11 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         exam.setEndAt(endAt);
         exam.setDurationMinutes(request.getDurationMinutes());
         exam.setMaxAttempts(maxAttempts);
+        if (questionsChanged) {
+            exam.setQuestionCount(questionCount);
+            exam.getTopicIds().clear();
+            exam.getTopicIds().addAll(topicIds);
+        }
         return toResponse(examRepository.save(exam), now);
     }
 
@@ -242,6 +276,40 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         }
     }
 
+    /** Bo id trung va khoang trang thua. null / rong = khong chon chu de. */
+    private Set<String> normalizeTopicIds(List<String> topicIds) {
+        Set<String> result = new LinkedHashSet<>();
+        if (topicIds != null) {
+            for (String topicId : topicIds) {
+                if (StringUtils.hasText(topicId)) {
+                    result.add(topicId.trim());
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Chu de phai ton tai, thuoc quyen cua nguoi thao tac (admin: tat ca) va co du cau hoi DA DUYET.
+     * Khong chon chu de nao thi khong kiem tra (phien lay cau hoi theo cach mac dinh).
+     */
+    private void validateTopics(Set<String> topicIds, Integer questionCount, UserPrincipal actor) {
+        if (topicIds.isEmpty()) {
+            return;
+        }
+        List<TopicResponse> topics = contentService.getTopicsByIds(actor, topicIds);
+        if (topics.size() != topicIds.size()) {
+            throw new BusinessException(ErrorCode.EXAM_TOPIC_INVALID);
+        }
+        int approved = topics.stream().mapToInt(TopicResponse::getApprovedQuestionCount).sum();
+        int needed = questionCount == null ? 1 : questionCount;
+        if (approved < needed) {
+            throw new BusinessException(ErrorCode.EXAM_NOT_ENOUGH_QUESTIONS,
+                    "Các chủ đề đã chọn chỉ có " + approved + " câu hỏi đã duyệt, chưa đủ " + needed
+                            + " câu cho phiên thi. Hãy duyệt thêm câu hỏi, chọn thêm chủ đề hoặc giảm số câu hỏi");
+        }
+    }
+
     private ExamSessionStatus parseStatus(String status) {
         if (!StringUtils.hasText(status)) {
             return null;
@@ -297,7 +365,8 @@ public class ExamSessionServiceImpl implements ExamSessionService {
     private ExamSessionResponse toResponse(VivaExam exam, LocalDateTime now) {
         String ownerName = userService.getFullNamesByIds(List.of(exam.getLecturerId())).get(exam.getLecturerId());
         long attemptCount = attemptRepository.countByExam_Id(exam.getId());
-        return examMapper.toResponse(exam, ownerName, attemptCount, now);
+        Map<String, String> topicNames = contentService.getTopicNames(exam.getTopicIds());
+        return examMapper.toResponse(exam, ownerName, attemptCount, topicNames, now);
     }
 
     private LocalDateTime now() {

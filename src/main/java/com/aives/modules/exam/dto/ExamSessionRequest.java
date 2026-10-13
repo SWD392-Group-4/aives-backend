@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -50,4 +51,15 @@ public class ExamSessionRequest {
     @Min(value = 1, message = "Số lượt thi tối đa ít nhất là 1")
     @Max(value = 10, message = "Số lượt thi tối đa không quá 10")
     private Integer maxAttempts;
+
+    @Schema(example = "[\"TP0123456789\"]", description = "Id các chủ đề lấy câu hỏi cho phiên (1 hoặc nhiều). "
+            + "Bỏ trống khi sửa: giữ nguyên. Chỉ đổi được khi phiên chưa mở")
+    @Size(max = 20, message = "Mỗi phiên thi chọn tối đa 20 chủ đề")
+    private List<@NotBlank(message = "Id chủ đề không được để trống") String> topicIds;
+
+    @Schema(example = "3", description = "Số câu hỏi gốc của phiên (1-30), bốc ngẫu nhiên từ câu đã duyệt của các chủ đề đã chọn. "
+            + "Bỏ trống: 3 câu khi tạo, giữ nguyên khi sửa")
+    @Min(value = 1, message = "Số câu hỏi ít nhất là 1")
+    @Max(value = 30, message = "Số câu hỏi không quá 30")
+    private Integer questionCount;
 }

@@ -192,7 +192,8 @@ public class ContentImportServiceImpl implements ContentImportService {
                 }
                 // Gemini doc truc tiep file PDF (ca chu lan bang bieu), khong can thu vien doc PDF
                 return LlmRequest.longRunning(systemInstruction, prompt, schema)
-                        .withAttachment("application/pdf", fileBytes);
+                        .withAttachment("application/pdf", fileBytes)
+                        .forDocumentExtraction();
             }
             case "docx" -> {
                 String text;
@@ -201,11 +202,11 @@ public class ContentImportServiceImpl implements ContentImportService {
                 } catch (IllegalArgumentException ex) {
                     throw new BusinessException(ErrorCode.IMPORT_FILE_INVALID, ex.getMessage());
                 }
-                return LlmRequest.longRunning(systemInstruction, prompt + textBlock(text), schema);
+                return LlmRequest.longRunning(systemInstruction, prompt + textBlock(text), schema).forDocumentExtraction();
             }
             case "txt", "md" -> {
                 String text = new String(fileBytes, StandardCharsets.UTF_8);
-                return LlmRequest.longRunning(systemInstruction, prompt + textBlock(text), schema);
+                return LlmRequest.longRunning(systemInstruction, prompt + textBlock(text), schema).forDocumentExtraction();
             }
             case "doc" -> throw new BusinessException(ErrorCode.IMPORT_FILE_INVALID,
                     "Chưa hỗ trợ file .doc đời cũ. Hãy mở bằng Word rồi lưu lại thành .docx hoặc .pdf");

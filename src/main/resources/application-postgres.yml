@@ -1,0 +1,27 @@
+# Profile: PostgreSQL (mac dinh), database "aives"
+# Tao database 1 lan: psql -U postgres -c "CREATE DATABASE aives ENCODING 'UTF8'"
+# (hoac chay database/postgres/00_init_aives.sql). Bang duoc Hibernate tu tao / cap nhat (ddl-auto: update).
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/aives}}
+    username: ${DB_USERNAME:${SPRING_DATASOURCE_USERNAME:postgres}}
+    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:123456}}
+    hikari:
+      pool-name: AivesHikariPostgres
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: ${DB_DDL_AUTO:update}
+    properties:
+      hibernate:
+        # Dialect PostgreSQL duoc Hibernate tu nhan tu JDBC URL, khong can khai bao
+        # Gom insert / update thanh lo (nhap 60 cau hoi tu file chi ton vai lan goi DB)
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true

@@ -2,8 +2,9 @@ spring:
   application:
     name: aives-backend
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:sqlserver}
-    default: sqlserver
+    # postgres (mac dinh) | sqlserver (ban cu) | supabase | dev (H2 in-memory)
+    active: ${SPRING_PROFILES_ACTIVE:postgres}
+    default: postgres
   servlet:
     multipart:
       # File cau hoi giang vien gui len (pdf / docx / txt)
@@ -59,11 +60,24 @@ app:
       # Ten model lay tu danh sach https://ai.google.dev/gemini-api/docs/models. Google doi ten kha thuong xuyen:
       # gap loi HTTP 404 "model ... is no longer available" thi doi GEMINI_MODEL trong .env theo goi y trong loi.
       model: ${GEMINI_MODEL:gemini-3.8-flash}
+      # Model du phong (cach nhau bang dau phay), dung khi model chinh qua tai (HTTP 503) hoac het luot (429)
+      # du da goi lai. De trong (GEMINI_FALLBACK_MODELS=) = khong dung model du phong.
+      # Khong dung gemini-3.7-flash: deprecated tu 08/10/2026, Google tu chuyen sang 3.8 nen du phong vo tac dung.
+      fallback-models: ${GEMINI_FALLBACK_MODELS:gemini-3.6-flash,gemini-3.5-flash-lite}
+      # Model rieng cho viec DOC FILE cau hoi / rubric (chi tach du lieu): Flash-Lite nhanh hon nhieu.
+      # De trong (GEMINI_IMPORT_MODEL=) = dung model chinh. Loi tam thoi thi tu chuyen sang model chinh.
+      import-model: ${GEMINI_IMPORT_MODEL:gemini-3.5-flash-lite}
+      # So lan goi lai model chinh khi loi tam thoi: viec nang (cham diem, doc file) / hoi xoay luc dang thi
+      max-retries: ${GEMINI_MAX_RETRIES:3}
+      quick-max-retries: ${GEMINI_QUICK_MAX_RETRIES:1}
+      # Cho truoc lan goi lai dau tien (ms), cac lan sau gap doi, toi da 10 giay
+      retry-delay-ms: ${GEMINI_RETRY_DELAY_MS:2000}
       # Thoi gian toi da cho 1 lan goi AI khi dang thi (ms). Qua thoi gian nay he thong tu chuyen cau hoi tiep theo.
       read-timeout-ms: ${GEMINI_TIMEOUT_MS:20000}
       # Thoi gian toi da cho viec nang: cham diem 1 cau hoi, doc file cau hoi giang vien gui len (ms)
       long-read-timeout-ms: ${GEMINI_LONG_TIMEOUT_MS:120000}
-      # Muc "suy nghi" cua dong Gemini 3: minimal / low / medium / high. De trong = dung mac dinh cua model.
+      # Muc "suy nghi" cua dong Gemini 3: low / medium / high (gemini-3.8-flash KHONG nhan minimal, mac dinh medium).
+      # low = tra loi nhanh nhat. De trong = dung mac dinh cua model.
       thinking-level: ${GEMINI_THINKING_LEVEL:low}
       # Kieu cu cua dong Gemini 2.5 (0 = tat suy nghi). Chi dung khi thinking-level de trong. -1 = khong gui.
       thinking-budget: ${GEMINI_THINKING_BUDGET:-1}
@@ -77,8 +91,11 @@ app:
     # Bao lau quet 1 lan (ms)
     poll-interval-ms: ${GRADING_POLL_INTERVAL_MS:5000}
   seed:
-    # true: tao bo cau hoi mau Toan lop 6 - 7 (1 bai hoc, 1 rubric, 5 cau hoi da duyet) neu chua co
-    sample-content: ${SEED_SAMPLE_CONTENT:true}
+    # false (mac dinh): khong co du lieu mau. Neu database dang co 2 bai hoc mau ("Toan lop 6 - 7 (du lieu mau)",
+    #   "Kien truc phan mem (du lieu mau)") thi luc khoi dong se XOA HAN chung, kem chu de, cau hoi va moi
+    #   luot thi / diem / don phuc khao cua cac phien thi da dung cau hoi mau.
+    # true: tao bo cau hoi mau Toan lop 6 - 7 neu chua co (profile dev / test tu dong dung gia tri nay).
+    sample-content: ${SEED_SAMPLE_CONTENT:false}
     admin:
       email: ${ADMIN_EMAIL:admin@aives.local}
       password: ${ADMIN_PASSWORD:Admin@123}

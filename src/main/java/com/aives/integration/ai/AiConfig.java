@@ -18,7 +18,11 @@ public class AiConfig {
             log.warn("[AI CHUA BAT] Chua co GEMINI_API_KEY: phong van se khong hoi xoay, chi di lan luot cac cau hoi goc");
             return new StubLlmClient();
         }
-        log.info("AI da bat: Gemini model {}", properties.getModel());
+        log.info("AI da bat: Gemini model {}, model doc file {}, model du phong {}, goi lai toi da {} lan khi loi tam thoi",
+                properties.getModel(),
+                properties.getImportModel() == null || properties.getImportModel().isBlank()
+                        ? "(dung model chinh)" : properties.getImportModel(),
+                properties.getFallbackModels(), properties.getMaxRetries());
         return new GeminiLlmClient(properties, restClientBuilder);
     }
 }

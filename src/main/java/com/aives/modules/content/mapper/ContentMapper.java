@@ -26,6 +26,10 @@ public class ContentMapper {
 
     /** topic.getLesson() va question.getTopic() / getRubric() phai da duoc nap (join fetch hoac dang trong transaction). */
     public TopicResponse toTopicResponse(Topic topic, int questionCount) {
+        return toTopicResponse(topic, questionCount, 0);
+    }
+
+    public TopicResponse toTopicResponse(Topic topic, int questionCount, int approvedQuestionCount) {
         return TopicResponse.builder()
                 .id(topic.getId())
                 .lessonId(topic.getLesson().getId())
@@ -33,6 +37,7 @@ public class ContentMapper {
                 .name(topic.getName())
                 .description(topic.getDescription())
                 .questionCount(questionCount)
+                .approvedQuestionCount(approvedQuestionCount)
                 .build();
     }
 

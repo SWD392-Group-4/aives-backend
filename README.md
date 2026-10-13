@@ -7,7 +7,7 @@ Backend của **AIVES – AI-powered Viva Exam System** (Spring Boot Monolith).
 - Spring Web, Validation, Spring Data JPA, Spring Security + JWT
 - Swagger (springdoc-openapi)
 - Spring Mail (gửi mật khẩu tạm khi admin tạo tài khoản)
-- Microsoft SQL Server (profile `sqlserver`, mặc định) / H2 in-memory (profile `dev`)
+- PostgreSQL (profile `postgres`, mặc định) / Microsoft SQL Server (profile `sqlserver`, bản cũ) / H2 in-memory (profile `dev`)
 
 ## Cấu trúc
 ```
@@ -29,18 +29,21 @@ src/main/java/com/aives/
     └── vivaroom/    # (chưa làm)
 ```
 
-## Chạy local
-1. Tạo database:
-   - **Máy chưa có database**: chạy `database/00_init_aives.sql` trong SSMS. Script tự tạo database `aives` và đủ 17 bảng (bảng nào đã có thì bỏ qua), kèm 3 dòng của bảng `roles`.
-   - **Database đã có từ trước** (bảng `users` còn cột `role`): chạy `06_roles.sql` rồi `07_exam_max_attempts.sql` **trước khi chạy backend bản mới**, sau đó chạy `00_init_aives.sql` để tạo nốt các bảng còn thiếu. Database tạo theo các bản script cũ hơn nữa thì chạy trước theo thứ tự `03_alter_users.sql`, `04_viva_exams_id_as_code.sql`, `05_rename_viva_attempts_fk.sql`.
+## Chạy local (PostgreSQL)
+1. Cài PostgreSQL 14+ (Windows: bản cài của EnterpriseDB, nhớ mật khẩu user `postgres`), rồi tạo database:
+   - Nhanh nhất: `psql -U postgres -c "CREATE DATABASE aives ENCODING 'UTF8'"` (hoặc tạo bằng pgAdmin). Bảng do Hibernate tự tạo khi chạy backend (`ddl-auto: update`).
+   - Muốn có đủ ràng buộc CHECK / index như bản SQL Server: chạy thêm `psql -U postgres -d aives -f database/postgres/00_init_aives.sql` (chạy lại nhiều lần không sao).
    - Quy ước tên: khoá chính `<tên bảng>_id`; khoá ngoại mang đúng tên khoá chính nó trỏ tới (`users.roles_id`, `viva_attempts.viva_exams_id`), trừ khoá ngoại theo vai trò (`lecturer_id`, `student_id`...).
-2. Khai báo tài khoản DB trong `application-sqlserver.yml` (hoặc biến môi trường `DB_USERNAME`, `DB_PASSWORD`, `DB_URL`).
+2. Khai báo kết nối trong file `.env` (xem `.env.example`): `DB_URL=jdbc:postgresql://localhost:5432/aives`, `DB_USERNAME`, `DB_PASSWORD`.
 3. Mở project bằng IntelliJ, chờ Maven tải dependency, chạy `AivesApplication`.
 4. Lần chạy đầu, `DataInitializer` tự tạo dữ liệu mẫu khi bảng `users` còn trống: 1 admin, 2 lecturer, 7 student
    (email và mật khẩu mẫu xem `DataInitializer` và mục `app.seed` trong `application.yml`).
 5. Mở Swagger: http://localhost:8080/swagger-ui.html, gọi `POST /api/auth/login`, copy `accessToken`, bấm **Authorize** rồi dán vào.
 
-Máy chưa cài SQL Server: chạy với profile `dev` (H2 in-memory) bằng biến môi trường `SPRING_PROFILES_ACTIVE=dev`.
+Profile khác (đặt `SPRING_PROFILES_ACTIVE` trong `.env`):
+- `sqlserver`: SQL Server như bản cũ, script ở `database/*.sql` (chạy trong SSMS).
+- `supabase`: PostgreSQL trên Supabase (`SPRING_DATASOURCE_URL`...).
+- `dev`: H2 in-memory, không cần cài database (dữ liệu mất khi tắt app).
 
 ## Role và tài khoản
 - Bảng `roles` tách riêng khỏi `users`: `roles(roles_id, name, description)` với 3 dòng `AD` / `LE` / `ST`. Mỗi user có đúng 1 role qua khoá ngoại `users.roles_id`. `DataInitializer` tự thêm role còn thiếu mỗi lần khởi động.
@@ -106,4 +109,4 @@ Không commit file `.env` (đã có trong `.gitignore`).
 - **Chống dò mã**: sai 5 lần trong 10 phút thì khoá tài khoản sinh viên đó khỏi việc vào thi cho đến khi lần sai cũ nhất hết hạn (bộ đếm lưu trong RAM).
 
 ## Test
-`mvn test` chạy `ExamSessionApiTest` (phiên thi, lượt thi) và `AdminUserApiTest` (bảng roles, tạo tài khoản + gửi mail, bắt đổi mật khẩu) trên H2 (profile `dev`), không cần SQL Server và không gửi mail thật.
+`mvn test` chạy `ExamSessionApiTest` (phiên thi, lượt thi) và `AdminUserApiTest` (bảng roles, tạo tài khoản + gửi mail, bắt đổi mật khẩu) trên H2 (profile `dev`), không cần PostgreSQL / SQL Server và không gửi mail thật.

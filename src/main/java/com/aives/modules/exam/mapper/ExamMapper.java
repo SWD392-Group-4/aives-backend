@@ -10,6 +10,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -29,8 +33,18 @@ public class ExamMapper {
         return ExamSessionStatus.ENDED;
     }
 
-    public ExamSessionResponse toResponse(VivaExam exam, String ownerName, long attemptCount, LocalDateTime now) {
+    /** topicNames: ten cac chu de theo id (chu de da bi xoa thi khong co trong map va bi bo qua). */
+    public ExamSessionResponse toResponse(VivaExam exam, String ownerName, long attemptCount,
+                                          Map<String, String> topicNames, LocalDateTime now) {
         ExamSessionStatus status = statusOf(exam, now);
+        List<ExamSessionResponse.TopicItem> topics = new ArrayList<>();
+        for (String topicId : exam.getTopicIds()) {
+            String name = topicNames.get(topicId);
+            if (name != null) {
+                topics.add(new ExamSessionResponse.TopicItem(topicId, name));
+            }
+        }
+        topics.sort(Comparator.comparing(ExamSessionResponse.TopicItem::getName));
         return ExamSessionResponse.builder()
                 .id(exam.getId())
                 .passcode(exam.getPasscode())
@@ -41,6 +55,8 @@ public class ExamMapper {
                 .durationMinutes(exam.getDurationMinutes())
                 .maxAttempts(exam.getMaxAttempts())
                 .status(status)
+                .questionCount(exam.getQuestionCount())
+                .topics(topics)
                 .ownerId(exam.getLecturerId())
                 .ownerName(ownerName)
                 .attemptCount(attemptCount)
