@@ -1,6 +1,9 @@
 # Profile: PostgreSQL (mac dinh), database "aives"
-# Tao database 1 lan: psql -U postgres -c "CREATE DATABASE aives ENCODING 'UTF8'"
-# (hoac chay database/postgres/00_init_aives.sql). Bang duoc Hibernate tu tao / cap nhat (ddl-auto: update).
+# Khi khoi dong, PostgresDatabaseCreator tu tao database "aives" va cac bang (script db/postgres/00_init_aives.sql)
+# neu chua co. Tat bang DB_AUTO_CREATE=false trong .env. Sau do Hibernate cap nhat bang (ddl-auto: update).
+app:
+  db:
+    auto-create: ${DB_AUTO_CREATE:true}
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver

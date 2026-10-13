@@ -1,1 +1,3 @@
-org.springframework.boot.env.EnvironmentPostProcessor=com.aives.common.config.TimeZoneNormalizer
+org.springframework.boot.env.EnvironmentPostProcessor=\
+com.aives.common.config.TimeZoneNormalizer,\
+com.aives.common.config.PostgresDatabaseCreator

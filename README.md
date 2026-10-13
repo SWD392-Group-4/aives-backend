@@ -30,11 +30,13 @@ src/main/java/com/aives/
 ```
 
 ## Chạy local (PostgreSQL)
-1. Cài PostgreSQL 14+ (Windows: bản cài của EnterpriseDB, nhớ mật khẩu user `postgres`), rồi tạo database:
-   - Nhanh nhất: `psql -U postgres -c "CREATE DATABASE aives ENCODING 'UTF8'"` (hoặc tạo bằng pgAdmin). Bảng do Hibernate tự tạo khi chạy backend (`ddl-auto: update`).
-   - Muốn có đủ ràng buộc CHECK / index như bản SQL Server: chạy thêm `psql -U postgres -d aives -f database/postgres/00_init_aives.sql` (chạy lại nhiều lần không sao).
+1. Cài PostgreSQL 14+ (Windows: bản cài của EnterpriseDB, nhớ mật khẩu user `postgres`). **Không cần tạo database bằng tay**:
+   khi backend khởi động, `PostgresDatabaseCreator` tự tạo database trong `DB_URL` (vd `aives`, UTF-8) và chạy
+   `src/main/resources/db/postgres/00_init_aives.sql` để tạo 18 bảng kèm ràng buộc CHECK / index, nếu chưa có.
+   Database / bảng đã có thì bỏ qua, không xoá dữ liệu. Tắt bằng `DB_AUTO_CREATE=false` trong `.env`.
+   - Sửa script thì sửa cả `database/postgres/00_init_aives.sql` và bản sao trong `src/main/resources/db/postgres/`.
    - Quy ước tên: khoá chính `<tên bảng>_id`; khoá ngoại mang đúng tên khoá chính nó trỏ tới (`users.roles_id`, `viva_attempts.viva_exams_id`), trừ khoá ngoại theo vai trò (`lecturer_id`, `student_id`...).
-2. Khai báo kết nối trong file `.env` (xem `.env.example`): `DB_URL=jdbc:postgresql://localhost:5432/aives`, `DB_USERNAME`, `DB_PASSWORD`.
+2. Khai báo kết nối trong file `.env` (xem `.env.example`): `SPRING_PROFILES_ACTIVE=postgres`, `DB_URL=jdbc:postgresql://localhost:5432/aives`, `DB_USERNAME`, `DB_PASSWORD`.
 3. Mở project bằng IntelliJ, chờ Maven tải dependency, chạy `AivesApplication`.
 4. Lần chạy đầu, `DataInitializer` tự tạo dữ liệu mẫu khi bảng `users` còn trống: 1 admin, 2 lecturer, 7 student
    (email và mật khẩu mẫu xem `DataInitializer` và mục `app.seed` trong `application.yml`).
