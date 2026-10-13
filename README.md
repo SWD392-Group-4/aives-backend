@@ -16,7 +16,7 @@ Backend của **AIVES – AI-powered Viva Exam System** (Spring Boot Monolith).
 ## 🛠️ Yêu cầu môi trường (Prerequisites)
 * **Java:** JDK 17 hoặc JDK 21
 * **Maven:** 3.8+ (hoặc dùng Maven Wrapper kèm theo `./mvnw`)
-* **Database:** PostgreSQL 14+ (database `aives` được backend tự tạo)
+* **Database:** Microsoft SQL Server (database tên `aives`)
 
 ---
 
@@ -31,16 +31,16 @@ Backend của **AIVES – AI-powered Viva Exam System** (Spring Boot Monolith).
    # Trên Windows PowerShell:
    Copy-Item .env.example .env
    ```
-2. Mở file `.env` vừa tạo và điền mật khẩu user `postgres` của máy bạn:
+2. Mở file `.env` vừa tạo và điền mật khẩu SQL Server của máy bạn:
    ```env
-   DB_PASSWORD=mật_khẩu_postgres_của_bạn
+   DB_PASSWORD=mật_khẩu_sql_server_của_bạn
    ```
-   *(Các biến khác như `JWT_SECRET`, `DB_USERNAME=postgres`, `DB_URL` đã có giá trị sẵn sàng để chạy).*
+   *(Các biến khác như `JWT_SECRET`, `DB_USERNAME=sa`, `DB_URL` đã có giá trị sẵn sàng để chạy).*
 
 ### Bước 2: Chuẩn bị Database
-Chỉ cần cài PostgreSQL và chạy service. Lần khởi động đầu, backend tự tạo database `aives` và 18 bảng
-(xem mục **Chạy local (PostgreSQL)** bên dưới). Vẫn dùng SQL Server thì đặt `SPRING_PROFILES_ACTIVE=sqlserver`
-và chạy `database/00_init_aives.sql` trong SSMS.
+Tạo database `aives` trên SQL Server rồi chạy các script trong thư mục `database/`:
+- **Máy chưa có database**: chạy `database/00_init_aives.sql` trong SSMS. Script tự tạo database `aives` và đủ 17 bảng (bảng nào đã có thì bỏ qua), kèm 3 dòng của bảng `roles`.
+- **Database đã có từ trước** (bảng `users` còn cột `role`): chạy `06_roles.sql` rồi `07_exam_max_attempts.sql` trước khi chạy backend bản mới, sau đó chạy `00_init_aives.sql` để tạo nốt các bảng còn thiếu.
 
 ### Bước 3: Khởi chạy ứng dụng
 Chạy lệnh:
@@ -56,7 +56,7 @@ mvn spring-boot:run
 Khi test Mobile (hoặc cho bạn bè trong team test từ xa), máy điện thoại **không thể gọi `localhost:8080`**. Backend hiện đã tích hợp **Tự động mở Cloudflare Tunnel**:
 
 ### ⭐ Lựa chọn 1: Cloudflare Tunnel (Tự động 100% - Khuyên dùng)
-> Không cần đăng ký tài khoản, không cần authtoken, băng thông không giới hạn, không có trang cảnh báo trình duyệt.
+
 
 1. Đảm bảo máy đã cài đặt Cloudflare Tunnel CLI (chỉ cài 1 lần):
    ```powershell
@@ -91,26 +91,13 @@ Sau khi chạy backend:
 ---
 
 ## 🏗️ Cấu trúc Dự án
-```text
-src/main/java/com/aives/
-├── AivesApplication.java # Chứa cơ chế tự động nạp & thẩm định file .env khi khởi động
-├── common/
-│   ├── config/      # SecurityConfig, CorsConfig, OpenApiConfig, JpaAuditingConfig, DataInitializer
-│   ├── security/    # JwtTokenProvider, JwtAuthFilter, UserPrincipal, TokenBlacklist...
-│   ├── exception/   # ErrorCode, BusinessException, GlobalExceptionHandler
-│   ├── dto/         # ApiResponse<T>
-│   ├── entity/      # BaseEntity (id, createdAt, updatedAt)
-│   └── controller/  # HealthController
-├── integration/
-│   └── mail/        # MailService (interface), SmtpMailService (gửi thật), LogOnlyMailService (chỉ in ra console)
-└── modules/
-    ├── auth/        # users + roles: controller, dto, entity, enums, mapper, repository, service, service/impl, util
-    ├── content/     # Quản lý bài học, rubric, câu hỏi, import tài liệu
-    ├── exam/        # Phiên thi (viva_exams) + lượt thi của sinh viên (viva_attempts)
-    ├── grading/     # Chấm điểm tự động qua AI, duyệt điểm, phúc khảo
-    └── vivaroom/    # Phòng thi vấn đáp AI thời gian thực
-```
 
+
+
+---
+
+## 🔑 Role và Tài khoản
+=======
 ## Chạy local (PostgreSQL)
 1. Cài PostgreSQL 14+ (Windows: bản cài của EnterpriseDB, nhớ mật khẩu user `postgres`). **Không cần tạo database bằng tay**:
    khi backend khởi động, `PostgresDatabaseCreator` tự tạo database trong `DB_URL` (vd `aives`, UTF-8) và chạy
@@ -129,9 +116,8 @@ Profile khác (đặt `SPRING_PROFILES_ACTIVE` trong `.env`):
 - `supabase`: PostgreSQL trên Supabase (`SPRING_DATASOURCE_URL`...).
 - `dev`: H2 in-memory, không cần cài database (dữ liệu mất khi tắt app).
 
----
+## Role và tài khoản
 
-## 🔑 Role và Tài khoản
 - Bảng `roles` tách riêng khỏi `users`: `roles(roles_id, name, description)` với 3 dòng `AD` / `LE` / `ST`. Mỗi user có đúng 1 role qua khoá ngoại `users.roles_id`. `DataInitializer` tự thêm role còn thiếu mỗi lần khởi động.
 - Trong code: entity `Role` (bảng `roles`) và enum `RoleName` (`ADMIN`, `LECTURER`, `STUDENT`). API vẫn trả `"role": "ADMIN"` như trước nên FE không phải đổi.
 - **Admin tạo tài khoản** (`POST /api/admin/users`): không nhập mật khẩu. Hệ thống sinh mật khẩu tạm 10 ký tự, gửi tới email của người dùng, và đặt `users.must_change_password = 1`.
@@ -152,15 +138,13 @@ Khai báo trong file `.env` (xem `.env.example`) hoặc biến môi trường:
 | `MAIL_FROM` | Địa chỉ hiện ở ô người gửi, mặc định bằng `MAIL_USERNAME`. |
 | `FRONTEND_URL` | Dùng để chèn link đăng nhập vào email, mặc định `http://localhost:5173`. |
 
-Không commit file `.env` (đã có trong `.gitignore`).
+
+
 
 ## 🤖 Cấu hình AI Gemini
 Khai báo trong file `.env`:
-* `GEMINI_API_KEY`: API key tạo từ [Google AI Studio](https://aistudio.google.com/apikey). Để trống thì hệ thống vẫn chạy nhưng không có câu hỏi xoáy AI.
+* `GEMINI_API_KEY`: API key tạo từ [Google AI Studio](https://aistudio.google.com/apikey). Để trống thì hệ thống vẫn chạy nhưng không có câu hỏi xoay AI.
 * `GEMINI_MODEL`: Mặc định `gemini-3.8-flash`.
-* `GEMINI_FALLBACK_MODELS`: model dự phòng khi model chính quá tải (503) / hết lượt (429), mặc định `gemini-3.6-flash,gemini-3.5-flash-lite`.
-* `GEMINI_IMPORT_MODEL`: model riêng cho việc đọc file câu hỏi / rubric, mặc định `gemini-3.5-flash-lite`.
-
 
 ## Quy tắc id của user
 `users.users_id` = 2 chữ cái theo role + 6 chữ số ngẫu nhiên, do `UserIdGenerator` sinh:
@@ -206,3 +190,4 @@ Khai báo trong file `.env`:
 
 ## Test
 `mvn test` chạy `ExamSessionApiTest` (phiên thi, lượt thi) và `AdminUserApiTest` (bảng roles, tạo tài khoản + gửi mail, bắt đổi mật khẩu) trên H2 (profile `dev`), không cần PostgreSQL / SQL Server và không gửi mail thật.
+
