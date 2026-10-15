@@ -7,6 +7,8 @@ services:
     plan: free
     region: singapore
     envVars:
+      - key: APP_ENV
+        value: deploy
       - key: SPRING_PROFILES_ACTIVE
         value: supabase
       - key: DB_URL
