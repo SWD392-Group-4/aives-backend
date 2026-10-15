@@ -33,7 +33,7 @@ spring:
           writetimeout: 10000
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
   forward-headers-strategy: framework
 
 app:
@@ -86,9 +86,6 @@ app:
       password: ${ADMIN_PASSWORD}
       full-name: System Admin
     default-password: ${SEED_DEFAULT_PASSWORD}
-  tunnel:
-    cloudflare:
-      enabled: ${CLOUDFLARE_TUNNEL_ENABLED:true}
 
 springdoc:
   swagger-ui:

@@ -51,32 +51,30 @@ mvn spring-boot:run
 
 ---
 
-## 🌐 Chia sẻ API Backend cho Mobile & Thiết bị ngoài qua Cloudflare Tunnel
+## 🐳 Triển khai với Docker & Render
 
-Khi test Mobile (hoặc cho bạn bè trong team test từ xa), máy điện thoại **không thể gọi `localhost:8080`**. Backend hiện đã tích hợp **Tự động mở Cloudflare Tunnel**:
+### 1. Build & Chạy Docker tại local:
+```bash
+docker build -t aives-backend .
+docker run -p 8080:8080 --env-file .env aives-backend
+```
 
-### ⭐ Lựa chọn 1: Cloudflare Tunnel (Tự động 100% - Khuyên dùng)
-
-
-1. Đảm bảo máy đã cài đặt Cloudflare Tunnel CLI (chỉ cài 1 lần):
-   ```powershell
-   winget install --id Cloudflare.cloudflared
-   ```
-2. Khởi chạy Backend như bình thường:
-   ```bash
-   mvn spring-boot:run
-   ```
-3. **Cơ chế tự động:**
-   * Backend tự động phát hiện và khởi chạy `cloudflared` cho port `8080`.
-   * Cloudflare cấp phát URL công khai ngẫu nhiên dạng: `https://<random>.trycloudflare.com`.
-   * Backend **tự động cập nhật `EXPO_PUBLIC_API_URL` vào file `aives-mobile/.env`**! Bạn **không cần copy-paste thủ công**.
-   * Khi bạn dừng Backend (Ctrl+C), tiến trình tunnel cũng sẽ tự động được dọn dẹp sạch sẽ.
-
----
-
-### ⭐ Lựa chọn 2: Port Forwarding của VS Code hoặc Ngrok (Thủ công)
-* **VS Code:** Tab **Ports** -> Forward port `8080` -> Public -> Copy link `asse.devtunnels.ms`.
-* **Ngrok:** Chạy `ngrok http 8080` -> Copy link `ngrok-free.app` dán vào `.env` của mobile.
+### 2. Triển khai lên Render:
+- Tạo **New Web Service** trên Render kết nối với repo GitHub.
+- **Root Directory**: `aives-backend` (hoặc để trống nếu repo riêng).
+- **Environment**: `Docker` (Render sẽ tự động dùng `Dockerfile`).
+- **Cấu hình Environment Variables trên Render Dashboard**:
+  - `SPRING_PROFILES_ACTIVE`: `supabase`
+  - `DB_URL`: `jdbc:postgresql://<host-pooler-supabase>:6543/postgres?sslmode=require&prepareThreshold=0`
+  - `DB_USERNAME`: `postgres.<project-ref>`
+  - `DB_PASSWORD`: `<mat_khau_supabase>`
+  - `JWT_SECRET`: chuỗi ký tự bí mật >= 32 ký tự
+  - `CORS_ALLOWED_ORIGINS`: `*` hoặc domain của frontend Web/Mobile
+  - `ADMIN_EMAIL`: `admin@aives.local`
+  - `ADMIN_PASSWORD`: `Admin@123`
+  - `SEED_DEFAULT_PASSWORD`: `Aives@123`
+  - `MAIL_ENABLED`: `false` (hoặc cấu hình Gmail nếu muốn gửi mail thật)
+- *Lưu ý*: Ứng dụng đã tự động map cổng qua biến `${PORT}` mà Render cung cấp.
 
 ---
 

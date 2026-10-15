@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: aives-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: supabase
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_MAX_POOL_SIZE
+        value: "100"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"
+      - key: ADMIN_EMAIL
+        value: admin@aives.local
+      - key: ADMIN_PASSWORD
+        value: Admin@123
+      - key: SEED_DEFAULT_PASSWORD
+        value: Aives@123
+      - key: MAIL_ENABLED
+        value: "false"

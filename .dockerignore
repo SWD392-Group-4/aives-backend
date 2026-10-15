@@ -1,0 +1,13 @@
+target/
+.git/
+.gitignore
+.env
+*.env.local
+.idea/
+.vscode/
+*.log
+*.cmd
+Claude outputs/
+LINH.md
+README.md
+database/
