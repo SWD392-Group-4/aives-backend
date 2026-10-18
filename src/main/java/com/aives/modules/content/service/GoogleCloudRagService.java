@@ -222,15 +222,15 @@ public class GoogleCloudRagService {
                         location, projectId, location, corpusId);
 
                 Map<String, Object> body = Map.of(
-                        "ragFileChunkingConfig", Map.of(
-                                "fixedLengthChunking", Map.of(
-                                        "chunkSize", 1024,
-                                        "chunkOverlap", 256
-                                )
-                        ),
                         "importRagFilesConfig", Map.of(
                                 "gcsSource", Map.of(
                                         "uris", List.of(gcsUri)
+                                ),
+                                "ragFileChunkingConfig", Map.of(
+                                        "fixedLengthChunking", Map.of(
+                                                "chunkSize", 1024,
+                                                "chunkOverlap", 256
+                                        )
                                 )
                         )
                 );
@@ -387,13 +387,84 @@ public class GoogleCloudRagService {
         return toMaterialResponse(saved);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
+    public List<MaterialResponse> syncMaterialsFromRagCorpus(UserPrincipal actor) {
+        try {
+            String token = getAccessToken();
+            String listUrl = String.format(
+                    "https://%s-aiplatform.googleapis.com/v1beta1/projects/%s/locations/%s/ragCorpora/%s/ragFiles",
+                    location, projectId, location, corpusId);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(listUrl))
+                    .header("Authorization", "Bearer " + token)
+                    .timeout(Duration.ofSeconds(15))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode ragFiles = root.path("ragFiles");
+                if (ragFiles.isArray()) {
+                    for (JsonNode rf : ragFiles) {
+                        String name = rf.path("name").asText(""); // projects/.../ragFiles/5811970578693285086
+                        String displayName = rf.path("displayName").asText("").trim();
+                        if (displayName.isBlank() && !name.isBlank()) {
+                            displayName = name.substring(name.lastIndexOf('/') + 1);
+                        }
+                        String state = rf.path("fileStatus").path("state").asText("ACTIVE");
+                        String status = "ACTIVE".equalsIgnoreCase(state) ? "READY" : state;
+
+                        final String finalFileName = displayName;
+                        boolean exists = materialRepository.findAll().stream()
+                                .anyMatch(m -> finalFileName.equalsIgnoreCase(m.getFileName()) || finalFileName.equalsIgnoreCase(m.getTitle()));
+
+                        if (!exists) {
+                            String ext = getFileExtension(displayName).toLowerCase(Locale.ROOT);
+                            if (ext.isBlank()) {
+                                ext = "pptx";
+                            }
+                            Material syncedMaterial = Material.builder()
+                                    .id(idGenerator.next("MAT_"))
+                                    .lecturerId(actor.getId())
+                                    .title(displayName)
+                                    .fileName(displayName)
+                                    .fileSize(1024L * 1024L) // default 1MB
+                                    .fileType(ext)
+                                    .gcsUri("gs://" + bucketName + "/" + displayName)
+                                    .ragCorpusId(corpusId)
+                                    .ragStatus(status)
+                                    .chunkCount(1)
+                                    .createdAt(LocalDateTime.now())
+                                    .build();
+                            materialRepository.save(syncedMaterial);
+                            log.info("Synced RAG file from Cloud Corpus into database: {}", displayName);
+                        }
+                    }
+                }
+            } else {
+                log.warn("Failed to fetch ragFiles from Vertex AI Corpus. HTTP {}: {}", response.statusCode(), response.body());
+            }
+        } catch (Exception ex) {
+            log.error("Lỗi khi đồng bộ RAG Files từ Vertex AI Corpus", ex);
+        }
+
+        return listMaterials(actor, null, null);
+    }
+
+    @Transactional
     public List<MaterialResponse> listMaterials(UserPrincipal actor, String lessonId, String topicId) {
         String filterLecturer = (actor.getRole() == RoleName.ADMIN) ? null : actor.getId();
         String filterLesson = (lessonId != null && !lessonId.isBlank()) ? lessonId.trim() : null;
         String filterTopic = (topicId != null && !topicId.isBlank()) ? topicId.trim() : null;
 
         List<Material> list = materialRepository.findByFilters(filterLecturer, filterLesson, filterTopic);
+        // Nếu DB chưa có học liệu nào của giảng viên này, tự động đồng bộ từ RAG Corpus về
+        if (list.isEmpty() && (filterLesson == null && filterTopic == null)) {
+            syncMaterialsFromRagCorpus(actor);
+            list = materialRepository.findByFilters(filterLecturer, filterLesson, filterTopic);
+        }
         return list.stream().map(this::toMaterialResponse).toList();
     }
 
@@ -407,7 +478,48 @@ public class GoogleCloudRagService {
         }
 
         deleteFromGcs(material.getGcsUri());
+        deleteRagFileByNameOrFileName(material.getFileName());
         materialRepository.delete(material);
+    }
+
+    private void deleteRagFileByNameOrFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) return;
+        try {
+            String token = getAccessToken();
+            String listUrl = String.format(
+                    "https://%s-aiplatform.googleapis.com/v1beta1/projects/%s/locations/%s/ragCorpora/%s/ragFiles",
+                    location, projectId, location, corpusId);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(listUrl))
+                    .header("Authorization", "Bearer " + token)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode ragFiles = root.path("ragFiles");
+                if (ragFiles.isArray()) {
+                    for (JsonNode rf : ragFiles) {
+                        String name = rf.path("name").asText("");
+                        String dName = rf.path("displayName").asText("");
+                        if (fileName.equalsIgnoreCase(dName)) {
+                            String delUrl = "https://" + location + "-aiplatform.googleapis.com/v1beta1/" + name;
+                            HttpRequest delReq = HttpRequest.newBuilder()
+                                    .uri(URI.create(delUrl))
+                                    .header("Authorization", "Bearer " + token)
+                                    .DELETE()
+                                    .build();
+                            httpClient.send(delReq, HttpResponse.BodyHandlers.ofString());
+                            log.info("Deleted RAG file {} from Vertex AI Corpus", name);
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Không xóa được RAG File trên Vertex AI: {}", fileName, ex);
+        }
     }
 
     @Transactional

@@ -256,6 +256,14 @@ public class ContentController {
         return ApiResponse.ok(ragService.listMaterials(principal, lessonId, topicId));
     }
 
+    @Operation(summary = "Đồng bộ danh sách học liệu từ Vertex AI RAG Corpus về hệ thống")
+    @PostMapping("/materials/sync")
+    public ApiResponse<List<MaterialResponse>> syncMaterials(
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        List<MaterialResponse> synced = ragService.syncMaterialsFromRagCorpus(principal);
+        return ApiResponse.ok("Đồng bộ tài liệu từ Vertex AI RAG Corpus thành công", synced);
+    }
+
     @Operation(summary = "Tải lên tài liệu/slide (.pptx, .ppt, .pdf, .docx), lưu GCS và tự động lập chỉ mục RAG Corpus")
     @PostMapping(value = "/materials/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
