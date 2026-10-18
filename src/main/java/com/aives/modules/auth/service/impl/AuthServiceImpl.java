@@ -5,14 +5,18 @@ import com.aives.common.exception.ErrorCode;
 import com.aives.common.security.JwtTokenProvider;
 import com.aives.common.security.TokenBlacklist;
 import com.aives.common.security.UserPrincipal;
+import com.aives.modules.auth.dto.ForgotPasswordRequest;
 import com.aives.modules.auth.dto.LoginRequest;
 import com.aives.modules.auth.dto.LoginResponse;
 import com.aives.modules.auth.dto.RegisterRequest;
+import com.aives.modules.auth.dto.ResetPasswordRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.entity.User;
+import com.aives.modules.auth.enums.OtpType;
 import com.aives.modules.auth.mapper.UserMapper;
 import com.aives.modules.auth.repository.UserRepository;
 import com.aives.modules.auth.service.AuthService;
+import com.aives.modules.auth.service.OtpService;
 import com.aives.modules.auth.service.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -27,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final UserService userService;
+    private final OtpService otpService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklist tokenBlacklist;
@@ -78,4 +83,25 @@ public class AuthServiceImpl implements AuthService {
             // Token da sai / het han san thi khong can lam gi
         }
     }
+
+    @Override
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        otpService.sendPasswordResetOtp(request.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        otpService.verifyAndConsumeOtp(email, request.getOtpCode(), OtpType.PASSWORD_RESET);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+    }
 }
+

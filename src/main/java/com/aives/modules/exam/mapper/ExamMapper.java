@@ -54,6 +54,7 @@ public class ExamMapper {
                 .endAt(toInstant(exam.getEndAt()))
                 .durationMinutes(exam.getDurationMinutes())
                 .maxAttempts(exam.getMaxAttempts())
+                .allowMobileExam(Boolean.TRUE.equals(exam.getAllowMobileExam()))
                 .status(status)
                 .questionCount(exam.getQuestionCount())
                 .topics(topics)

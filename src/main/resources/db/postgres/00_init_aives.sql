@@ -186,6 +186,7 @@ CREATE TABLE IF NOT EXISTS viva_exams (
     passcode                   VARCHAR(6)    NOT NULL,   -- ma truy cap 6 chu so
     duration_minutes           INTEGER       NOT NULL,   -- thoi luong lam bai cua MOI luot thi
     max_attempts               INTEGER       NOT NULL DEFAULT 1,
+    allow_mobile_exam          BOOLEAN       NOT NULL DEFAULT FALSE,
     max_follow_up_per_question INTEGER       NOT NULL DEFAULT 2,
     prepare_seconds            INTEGER       NOT NULL DEFAULT 30,
     answer_seconds             INTEGER       NOT NULL DEFAULT 120,

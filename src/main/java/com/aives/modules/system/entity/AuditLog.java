@@ -41,4 +41,7 @@ public class AuditLog extends BaseEntity {
 
     @Column(name = "new_value", length = Length.LONG32)
     private String newValue;
+
+    @Column(name = "ip_address", length = 50)
+    private String ipAddress;
 }

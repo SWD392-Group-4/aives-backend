@@ -19,4 +19,16 @@ public interface TopicRepository extends JpaRepository<Topic, String> {
             order by t.createdAt desc, t.id desc
             """)
     List<Topic> findWithLessonByLessonIds(@Param("lessonIds") Collection<String> lessonIds);
+
+    @Query("""
+            select t from Topic t
+            join fetch t.lesson l
+            where t.id = :id
+            """)
+    java.util.Optional<Topic> findWithLessonById(@Param("id") String id);
+
+    boolean existsByLesson_Id(String lessonId);
+
+    long countByLesson_Id(String lessonId);
 }
+

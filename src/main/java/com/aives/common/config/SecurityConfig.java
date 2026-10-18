@@ -28,6 +28,8 @@ public class SecurityConfig {
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/send-otp",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password",
             "/api/health/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",

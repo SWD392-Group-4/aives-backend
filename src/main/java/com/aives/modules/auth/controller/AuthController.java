@@ -3,9 +3,11 @@ package com.aives.modules.auth.controller;
 import com.aives.common.dto.ApiResponse;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.auth.dto.ChangePasswordRequest;
+import com.aives.modules.auth.dto.ForgotPasswordRequest;
 import com.aives.modules.auth.dto.LoginRequest;
 import com.aives.modules.auth.dto.LoginResponse;
 import com.aives.modules.auth.dto.RegisterRequest;
+import com.aives.modules.auth.dto.ResetPasswordRequest;
 import com.aives.modules.auth.dto.SendOtpRequest;
 import com.aives.modules.auth.dto.UpdateProfileRequest;
 import com.aives.modules.auth.dto.UserResponse;
@@ -46,6 +48,22 @@ public class AuthController {
     public ApiResponse<Void> sendOtp(@Valid @RequestBody SendOtpRequest request) {
         otpService.sendRegistrationOtp(request.getEmail());
         return ApiResponse.ok("Mã xác thực OTP đã được gửi đến email của bạn", null);
+    }
+
+    @Operation(summary = "Yêu cầu gửi mã OTP đặt lại mật khẩu")
+    @SecurityRequirements // API nay khong can token
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ApiResponse.ok("Mã xác thực OTP đặt lại mật khẩu đã được gửi đến email của bạn", null);
+    }
+
+    @Operation(summary = "Đặt lại mật khẩu với mã xác thực OTP")
+    @SecurityRequirements // API nay khong can token
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ApiResponse.ok("Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới", null);
     }
 
     @Operation(summary = "Sinh viên tự đăng ký tài khoản (role luôn là STUDENT)")

@@ -4,6 +4,7 @@ import com.aives.common.dto.PageResponse;
 import com.aives.common.exception.BusinessException;
 import com.aives.common.exception.ErrorCode;
 import com.aives.common.security.UserPrincipal;
+import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.service.UserService;
 import com.aives.modules.content.dto.TopicResponse;
@@ -11,20 +12,31 @@ import com.aives.modules.content.service.ContentService;
 import com.aives.modules.exam.dto.DeleteExamSessionResponse;
 import com.aives.modules.exam.dto.ExamSessionRequest;
 import com.aives.modules.exam.dto.ExamSessionResponse;
+import com.aives.modules.exam.dto.LiveExamineeResponse;
+import com.aives.modules.exam.dto.LiveExamMonitorResponse;
+import com.aives.modules.exam.entity.VivaAttempt;
 import com.aives.modules.exam.entity.VivaExam;
+import com.aives.modules.exam.enums.AttemptStatus;
 import com.aives.modules.exam.enums.ExamSessionStatus;
 import com.aives.modules.exam.mapper.ExamMapper;
 import com.aives.modules.exam.repository.VivaAttemptRepository;
+import com.aives.modules.exam.repository.VivaExamQuestionRepository;
 import com.aives.modules.exam.repository.VivaExamRepository;
 import com.aives.modules.exam.service.ExamSessionService;
 import com.aives.modules.exam.util.ExamCodeGenerator;
+import com.aives.modules.vivaroom.entity.InterviewExchange;
+import com.aives.modules.vivaroom.repository.InterviewExchangeRepository;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +69,8 @@ public class ExamSessionServiceImpl implements ExamSessionService {
 
     private final VivaExamRepository examRepository;
     private final VivaAttemptRepository attemptRepository;
+    private final VivaExamQuestionRepository examQuestionRepository;
+    private final InterviewExchangeRepository exchangeRepository;
     private final ExamCodeGenerator codeGenerator;
     private final ExamMapper examMapper;
     private final UserService userService;
@@ -80,6 +94,7 @@ public class ExamSessionServiceImpl implements ExamSessionService {
                 .passcode(codeGenerator.generatePasscode())
                 .durationMinutes(request.getDurationMinutes())
                 .maxAttempts(request.getMaxAttempts() == null ? 1 : request.getMaxAttempts())
+                .allowMobileExam(Boolean.TRUE.equals(request.getAllowMobileExam()))
                 .questionCount(request.getQuestionCount())
                 .topicIds(topicIds)
                 .startAt(startAt)
@@ -202,6 +217,9 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         exam.setEndAt(endAt);
         exam.setDurationMinutes(request.getDurationMinutes());
         exam.setMaxAttempts(maxAttempts);
+        if (request.getAllowMobileExam() != null) {
+            exam.setAllowMobileExam(request.getAllowMobileExam());
+        }
         if (questionsChanged) {
             exam.setQuestionCount(questionCount);
             exam.getTopicIds().clear();
@@ -252,6 +270,114 @@ public class ExamSessionServiceImpl implements ExamSessionService {
         }
         exam.setPasscode(passcode);
         return toResponse(examRepository.save(exam), now);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LiveExamMonitorResponse getLiveExamMonitor(String examId, UserPrincipal principal) {
+        VivaExam exam = findAccessible(examId, principal);
+        LocalDateTime now = now();
+
+        List<VivaAttempt> attempts = attemptRepository.findByExam_IdOrderByStartedAtDesc(exam.getId());
+
+        // Group theo studentId, lay attempt moi nhat cua moi thi sinh
+        Map<String, VivaAttempt> latestAttemptByStudent = new LinkedHashMap<>();
+        for (VivaAttempt attempt : attempts) {
+            latestAttemptByStudent.putIfAbsent(attempt.getStudentId(), attempt);
+        }
+
+        Set<String> studentIds = latestAttemptByStudent.keySet();
+        Map<String, UserResponse> users = userService.getUsersByIds(studentIds);
+
+        int totalQuestions = exam.getQuestionCount() != null && exam.getQuestionCount() > 0
+                ? exam.getQuestionCount()
+                : (int) examQuestionRepository.countByExam_Id(exam.getId());
+
+        List<InterviewExchange> allExchanges = exchangeRepository.findByExamIdInOrder(exam.getId());
+        Map<String, List<InterviewExchange>> exchangesByAttempt = allExchanges.stream()
+                .collect(Collectors.groupingBy(e -> e.getAttempt().getId()));
+
+        List<LiveExamineeResponse> examinees = new ArrayList<>();
+        int totalCompleted = 0;
+        int totalInProgress = 0;
+
+        for (VivaAttempt attempt : latestAttemptByStudent.values()) {
+            UserResponse user = users.get(attempt.getStudentId());
+            String fullName = user != null ? user.getFullName() : attempt.getStudentId();
+            String email = user != null ? user.getEmail() : null;
+
+            long remainingSeconds = attempt.getStatus() == AttemptStatus.COMPLETED
+                    ? 0
+                    : Math.max(0, Duration.between(now, attempt.getDeadlineAt()).getSeconds());
+            AttemptStatus status = (remainingSeconds == 0) ? AttemptStatus.COMPLETED : attempt.getStatus();
+
+            if (status == AttemptStatus.COMPLETED) {
+                totalCompleted++;
+            } else {
+                totalInProgress++;
+            }
+
+            List<InterviewExchange> attemptExchanges = exchangesByAttempt.getOrDefault(attempt.getId(), List.of());
+            InterviewExchange latestExchange = attemptExchanges.isEmpty() ? null : attemptExchanges.get(attemptExchanges.size() - 1);
+
+            Integer currentQuestionIndex;
+            if (latestExchange != null && latestExchange.getExamQuestion() != null) {
+                currentQuestionIndex = latestExchange.getExamQuestion().getOrderNo();
+            } else if (status == AttemptStatus.COMPLETED) {
+                currentQuestionIndex = totalQuestions;
+            } else if (totalQuestions > 0) {
+                currentQuestionIndex = 1;
+            } else {
+                currentQuestionIndex = 0;
+            }
+
+            int currentExchangeCount = attemptExchanges.size();
+
+            boolean isSpeaking = status == AttemptStatus.IN_PROGRESS
+                    && latestExchange != null
+                    && latestExchange.getTranscript() == null
+                    && latestExchange.getAiDecision() == null
+                    && latestExchange.getAnswerEndedAt() == null;
+
+            Instant lastActiveAt;
+            if (latestExchange != null) {
+                LocalDateTime dt = latestExchange.getAnswerEndedAt() != null
+                        ? latestExchange.getAnswerEndedAt()
+                        : (latestExchange.getUpdatedAt() != null ? latestExchange.getUpdatedAt() : latestExchange.getCreatedAt());
+                lastActiveAt = dt != null ? dt.toInstant(ZoneOffset.UTC) : attempt.getStartedAt().toInstant(ZoneOffset.UTC);
+            } else if (attempt.getCompletedAt() != null) {
+                lastActiveAt = attempt.getCompletedAt().toInstant(ZoneOffset.UTC);
+            } else {
+                lastActiveAt = attempt.getStartedAt().toInstant(ZoneOffset.UTC);
+            }
+
+            examinees.add(LiveExamineeResponse.builder()
+                    .studentId(attempt.getStudentId())
+                    .fullName(fullName)
+                    .email(email)
+                    .attemptId(attempt.getId())
+                    .status(status)
+                    .currentQuestionIndex(currentQuestionIndex)
+                    .totalQuestions(totalQuestions)
+                    .currentExchangeCount(currentExchangeCount)
+                    .remainingSeconds(remainingSeconds)
+                    .isSpeaking(isSpeaking)
+                    .lastActiveAt(lastActiveAt)
+                    .build());
+        }
+
+        examinees.sort(Comparator
+                .comparing((LiveExamineeResponse e) -> e.getStatus() == AttemptStatus.IN_PROGRESS ? 0 : 1)
+                .thenComparing(LiveExamineeResponse::getLastActiveAt, Comparator.nullsLast(Comparator.reverseOrder())));
+
+        return LiveExamMonitorResponse.builder()
+                .examId(exam.getId())
+                .examTitle(exam.getTitle())
+                .totalStudentsJoined(latestAttemptByStudent.size())
+                .totalCompleted(totalCompleted)
+                .totalInProgress(totalInProgress)
+                .examinees(examinees)
+                .build();
     }
 
     /* ===================== Validate ===================== */

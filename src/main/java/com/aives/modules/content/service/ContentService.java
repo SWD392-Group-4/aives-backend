@@ -1,11 +1,19 @@
 package com.aives.modules.content.service;
 
 import com.aives.common.security.UserPrincipal;
+import com.aives.modules.content.dto.CreateLessonRequest;
+import com.aives.modules.content.dto.CreateQuestionRequest;
+import com.aives.modules.content.dto.CreateRubricRequest;
+import com.aives.modules.content.dto.CreateTopicRequest;
 import com.aives.modules.content.dto.LessonResponse;
 import com.aives.modules.content.dto.QuestionFigureResponse;
 import com.aives.modules.content.dto.QuestionResponse;
 import com.aives.modules.content.dto.RubricResponse;
 import com.aives.modules.content.dto.TopicResponse;
+import com.aives.modules.content.dto.UpdateLessonRequest;
+import com.aives.modules.content.dto.UpdateQuestionRequest;
+import com.aives.modules.content.dto.UpdateRubricRequest;
+import com.aives.modules.content.dto.UpdateTopicRequest;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -44,4 +52,33 @@ public interface ContentService {
      * sinh vien dang thi cau hoi do.
      */
     Optional<String> findQuestionFigureDataUrl(String questionId);
+
+    // ==================== MANUAL CRUD: LESSONS & TOPICS ====================
+    LessonResponse createLesson(UserPrincipal actor, CreateLessonRequest request);
+
+    LessonResponse updateLesson(UserPrincipal actor, String lessonId, UpdateLessonRequest request);
+
+    void deleteLesson(UserPrincipal actor, String lessonId);
+
+    TopicResponse createTopic(UserPrincipal actor, CreateTopicRequest request);
+
+    TopicResponse updateTopic(UserPrincipal actor, String topicId, UpdateTopicRequest request);
+
+    void deleteTopic(UserPrincipal actor, String topicId);
+
+    // ==================== MANUAL CRUD: QUESTIONS ====================
+    QuestionResponse createQuestion(UserPrincipal actor, CreateQuestionRequest request);
+
+    QuestionResponse updateQuestion(UserPrincipal actor, String questionId, UpdateQuestionRequest request);
+
+    void deleteQuestion(UserPrincipal actor, String questionId);
+
+    // ==================== MANUAL CRUD: RUBRICS & CRITERIA ====================
+    RubricResponse createRubric(UserPrincipal actor, CreateRubricRequest request);
+
+    RubricResponse updateRubric(UserPrincipal actor, String rubricId, UpdateRubricRequest request);
+
+    void deleteRubric(UserPrincipal actor, String rubricId);
 }
+
+

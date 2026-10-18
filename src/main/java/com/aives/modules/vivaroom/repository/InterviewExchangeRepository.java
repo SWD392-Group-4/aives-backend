@@ -12,7 +12,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface InterviewExchangeRepository extends JpaRepository<InterviewExchange, String> {
 
-    // Moi luot hoi - dap cua 1 luot thi theo dung thu tu da hoi: cau goc (depth 0) roi den cac cau hoi xoay
     @Query("""
             select e from InterviewExchange e
             join fetch e.examQuestion eq
@@ -20,6 +19,16 @@ public interface InterviewExchangeRepository extends JpaRepository<InterviewExch
             order by eq.orderNo asc, e.depth asc
             """)
     List<InterviewExchange> findByAttemptInOrder(@Param("attemptId") String attemptId);
+
+    // Tat ca luot hoi - dap cua ca phien thi (cho Live Exam Monitoring)
+    @Query("""
+            select e from InterviewExchange e
+            join fetch e.examQuestion eq
+            join e.attempt a
+            where a.exam.id = :examId
+            order by a.id asc, eq.orderNo asc, e.depth asc
+            """)
+    List<InterviewExchange> findByExamIdInOrder(@Param("examId") String examId);
 
     /**
      * Ghi cau tra loi, CHI KHI luot nay chua co cau tra loi. Tra ve so dong da sua:

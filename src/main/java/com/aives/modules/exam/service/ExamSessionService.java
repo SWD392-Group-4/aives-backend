@@ -5,6 +5,7 @@ import com.aives.common.security.UserPrincipal;
 import com.aives.modules.exam.dto.DeleteExamSessionResponse;
 import com.aives.modules.exam.dto.ExamSessionRequest;
 import com.aives.modules.exam.dto.ExamSessionResponse;
+import com.aives.modules.exam.dto.LiveExamMonitorResponse;
 
 /**
  * Quan ly phien thi, danh cho LECTURER (chi phien cua minh) va ADMIN (moi phien).
@@ -22,4 +23,6 @@ public interface ExamSessionService {
     DeleteExamSessionResponse deleteSession(String sessionId, UserPrincipal actor);
 
     ExamSessionResponse regeneratePasscode(String sessionId, UserPrincipal actor);
+
+    LiveExamMonitorResponse getLiveExamMonitor(String examId, UserPrincipal principal);
 }

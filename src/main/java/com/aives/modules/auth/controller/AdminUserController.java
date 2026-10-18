@@ -1,11 +1,13 @@
 package com.aives.modules.auth.controller;
 
 import com.aives.common.dto.ApiResponse;
+import com.aives.common.dto.PageResponse;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.auth.dto.CreateUserRequest;
 import com.aives.modules.auth.dto.CreatedUserResponse;
 import com.aives.modules.auth.dto.UpdateUserStatusRequest;
 import com.aives.modules.auth.dto.UserResponse;
+import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,10 +38,14 @@ public class AdminUserController {
 
     private final UserService userService;
 
-    @Operation(summary = "Danh sách tất cả account")
+    @Operation(summary = "Danh sách tài khoản (hỗ trợ phân trang và tìm kiếm/lọc)")
     @GetMapping
-    public ApiResponse<List<UserResponse>> getAllUsers() {
-        return ApiResponse.ok(userService.getAllUsers());
+    public ApiResponse<PageResponse<UserResponse>> getUsers(
+            @RequestParam(required = false) RoleName role,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.ok(userService.getUsers(role, keyword, page, size));
     }
 
     @Operation(summary = "Tạo account mới (ADMIN / LECTURER / STUDENT). Hệ thống tự sinh mật khẩu tạm và gửi tới email của người dùng")

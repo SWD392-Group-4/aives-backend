@@ -76,4 +76,13 @@ public interface GradeAppealRepository extends JpaRepository<GradeAppeal, String
             order by ap.createdAt desc, ap.id desc
             """)
     List<GradeAppeal> findByAttempt(@Param("attemptId") String attemptId);
+
+    @Query("select count(ap) from GradeAppeal ap where ap.status = 'PENDING'")
+    long countPendingAll();
+
+    @Query("select count(ap) from GradeAppeal ap join ap.questionGrade g join g.attempt a join a.exam e where e.lecturerId = :lecturerId and ap.status = 'PENDING'")
+    long countPendingByLecturer(@Param("lecturerId") String lecturerId);
+
+    @Query("select count(ap) from GradeAppeal ap join ap.questionGrade g join g.attempt a where a.studentId = :studentId and ap.status = 'PENDING'")
+    long countPendingByStudentId(@Param("studentId") String studentId);
 }

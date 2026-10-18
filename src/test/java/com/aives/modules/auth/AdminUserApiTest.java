@@ -180,7 +180,7 @@ class AdminUserApiTest {
         // Tai khoan khong duoc tao: danh sach khong co email nay
         mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[?(@.email == '" + email + "')]", hasSize(0)));
+                .andExpect(jsonPath("$.data.items[?(@.email == '" + email + "')]", hasSize(0)));
 
         // Gui lai khi mail hoat dong: tao duoc voi dung email do (khong bi bao trung)
         mailService.fail = false;
@@ -226,6 +226,75 @@ class AdminUserApiTest {
         join.put("passcode", "000000");
         expectError(mockMvc.perform(json(post("/api/exam-sessions/join"), join).header("Authorization", "Bearer " + token)),
                 400, "EXAM_JOIN_INVALID");
+    }
+
+    @Test
+    void adminGetUsers_paginationAndFilters() throws Exception {
+        String adminToken = login(ADMIN, ADMIN_PASSWORD);
+
+        // Loc theo role ADMIN
+        mockMvc.perform(get("/api/admin/users?role=ADMIN&page=0&size=10").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isArray())
+                .andExpect(jsonPath("$.data.items[0].role").value("ADMIN"))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10));
+
+        // Loc theo keyword
+        mockMvc.perform(get("/api/admin/users?keyword=admin").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isArray())
+                .andExpect(jsonPath("$.data.items[0].email").value(ADMIN));
+    }
+
+    @Test
+    void forgotPasswordAndResetPasswordFlow() throws Exception {
+        // 1. Email khong ton tai -> USER_NOT_FOUND
+        Map<String, Object> notFoundBody = new LinkedHashMap<>();
+        notFoundBody.put("email", "unknown_user@fpt.edu.vn");
+        expectError(mockMvc.perform(json(post("/api/auth/forgot-password"), notFoundBody)),
+                404, "USER_NOT_FOUND");
+
+        // 2. Yeu cau OTP quen mat khau cho admin
+        Map<String, Object> forgotBody = new LinkedHashMap<>();
+        forgotBody.put("email", ADMIN);
+        mockMvc.perform(json(post("/api/auth/forgot-password"), forgotBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertThat(mailService.sent).hasSize(1);
+        MailMessage mail = mailService.sent.get(0);
+        Matcher matcher = Pattern.compile("Mã xác thực \\(OTP\\) của bạn là: (\\d{6})").matcher(mail.textBody());
+        assertThat(matcher.find()).isTrue();
+        String otpCode = matcher.group(1);
+
+        // 3. Reset password voi OTP sai -> OTP_INVALID
+        Map<String, Object> wrongOtpBody = new LinkedHashMap<>();
+        wrongOtpBody.put("email", ADMIN);
+        wrongOtpBody.put("otpCode", "000000");
+        wrongOtpBody.put("newPassword", "NewAdmin@123");
+        expectError(mockMvc.perform(json(post("/api/auth/reset-password"), wrongOtpBody)),
+                400, "OTP_INVALID");
+
+        // 4. Reset password thanh cong voi OTP dung
+        Map<String, Object> resetBody = new LinkedHashMap<>();
+        resetBody.put("email", ADMIN);
+        resetBody.put("otpCode", otpCode);
+        resetBody.put("newPassword", "NewAdmin@123");
+        mockMvc.perform(json(post("/api/auth/reset-password"), resetBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // 5. Dang nhap bang mat khau cu that bai
+        expectError(mockMvc.perform(json(post("/api/auth/login"), credentials(ADMIN, ADMIN_PASSWORD))),
+                401, "INVALID_CREDENTIALS");
+
+        // 6. Dang nhap bang mat khau moi thanh cong
+        String newToken = login(ADMIN, "NewAdmin@123");
+        assertThat(newToken).isNotBlank();
+
+        // Khoi phuc lai mat khau cu de cac test khac khong bi anh huong
+        changePassword(newToken, "NewAdmin@123", ADMIN_PASSWORD).andExpect(status().isOk());
     }
 
     /* ========================= HO TRO ========================= */

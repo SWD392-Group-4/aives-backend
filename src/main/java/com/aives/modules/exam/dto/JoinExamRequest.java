@@ -23,4 +23,7 @@ public class JoinExamRequest {
     @NotBlank(message = "Mã truy cập không được để trống")
     @Size(max = 10, message = "Mã truy cập gồm đúng 6 chữ số")
     private String passcode;
+
+    @Schema(example = "WEB", description = "Nền tảng của thiết bị: WEB | MOBILE (mặc định WEB)")
+    private String platform;
 }

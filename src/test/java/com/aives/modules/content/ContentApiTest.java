@@ -2,8 +2,10 @@ package com.aives.modules.content;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -356,7 +358,170 @@ class ContentApiTest extends ApiTestSupport {
                 .andExpect(jsonPath("$.data.questionText").value("Câu mới số 2?"));
     }
 
+    /* ========================= MANUAL CRUD ========================= */
+
+    @Test
+    void manualCrudLessonsAndTopics() throws Exception {
+        // 1. Create Lesson
+        Map<String, Object> lessonReq = Map.of(
+                "title", "Bài học thủ công",
+                "description", "Mô tả bài học"
+        );
+        JsonNode lesson = data(mockMvc.perform(json(auth(post(CONTENT + "/lessons"), LECTURER_2), lessonReq))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.title").value("Bài học thủ công"))
+                .andExpect(jsonPath("$.data.topicCount").value(0)));
+        String lessonId = lesson.get("id").asText();
+
+        // 2. Update Lesson
+        Map<String, Object> updateLessonReq = Map.of(
+                "title", "Bài học đã sửa",
+                "description", "Mô tả mới"
+        );
+        mockMvc.perform(json(auth(put(CONTENT + "/lessons/" + lessonId), LECTURER_2), updateLessonReq))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("Bài học đã sửa"));
+
+        // 3. Create Topic
+        Map<String, Object> topicReq = Map.of(
+                "lessonId", lessonId,
+                "name", "Chủ đề 1",
+                "description", "Mô tả chủ đề"
+        );
+        JsonNode topic = data(mockMvc.perform(json(auth(post(CONTENT + "/topics"), LECTURER_2), topicReq))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.name").value("Chủ đề 1"))
+                .andExpect(jsonPath("$.data.lessonId").value(lessonId)));
+        String topicId = topic.get("id").asText();
+
+        // 4. Update Topic
+        Map<String, Object> updateTopicReq = Map.of(
+                "name", "Chủ đề 1 đã sửa",
+                "description", "Mô tả chủ đề mới"
+        );
+        mockMvc.perform(json(auth(put(CONTENT + "/topics/" + topicId), LECTURER_2), updateTopicReq))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("Chủ đề 1 đã sửa"));
+
+        // Lesson cannot be deleted while containing topics
+        expectError(mockMvc.perform(auth(delete(CONTENT + "/lessons/" + lessonId), LECTURER_2)), 409, "DATA_CONFLICT");
+
+        // 5. Delete Topic
+        mockMvc.perform(auth(delete(CONTENT + "/topics/" + topicId), LECTURER_2))
+                .andExpect(status().isOk());
+
+        // 6. Delete Lesson
+        mockMvc.perform(auth(delete(CONTENT + "/lessons/" + lessonId), LECTURER_2))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void manualCrudRubricsAndCriteria() throws Exception {
+        // Invalid weights sum != 100 -> RUBRIC_WEIGHT_INVALID
+        Map<String, Object> badRubric = Map.of(
+                "name", "Rubric sai weight",
+                "criteria", List.of(
+                        Map.of("name", "C1", "description", "Mô tả", "weightPercent", 40.0),
+                        Map.of("name", "C2", "description", "Mô tả", "weightPercent", 40.0)
+                )
+        );
+        expectError(mockMvc.perform(json(auth(post(CONTENT + "/rubrics"), LECTURER_2), badRubric)),
+                400, "RUBRIC_WEIGHT_INVALID");
+
+        // Valid weights sum == 100
+        Map<String, Object> validRubric = Map.of(
+                "name", "Rubric chuẩn",
+                "criteria", List.of(
+                        Map.of("name", "Tiêu chí 1", "description", "Mô tả 1", "weightPercent", 60.0),
+                        Map.of("name", "Tiêu chí 2", "description", "Mô tả 2", "weightPercent", 40.0)
+                )
+        );
+        JsonNode rubric = data(mockMvc.perform(json(auth(post(CONTENT + "/rubrics"), LECTURER_2), validRubric))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.name").value("Rubric chuẩn"))
+                .andExpect(jsonPath("$.data.criteria", hasSize(2))));
+        String rubricId = rubric.get("id").asText();
+
+        // Update rubric
+        Map<String, Object> updateRubric = Map.of(
+                "name", "Rubric đã cập nhật",
+                "criteria", List.of(
+                        Map.of("name", "Tiêu chí A", "description", "Mô tả A", "weightPercent", 100.0)
+                )
+        );
+        mockMvc.perform(json(auth(put(CONTENT + "/rubrics/" + rubricId), LECTURER_2), updateRubric))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("Rubric đã cập nhật"))
+                .andExpect(jsonPath("$.data.criteria", hasSize(1)));
+
+        // Delete rubric
+        mockMvc.perform(auth(delete(CONTENT + "/rubrics/" + rubricId), LECTURER_2))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void manualCrudQuestions() throws Exception {
+        // Create lesson, topic, rubric
+        JsonNode lesson = data(mockMvc.perform(json(auth(post(CONTENT + "/lessons"), LECTURER_2),
+                Map.of("title", "Bài học hỏi đáp"))).andExpect(status().isCreated()));
+        String lessonId = lesson.get("id").asText();
+
+        JsonNode topic = data(mockMvc.perform(json(auth(post(CONTENT + "/topics"), LECTURER_2),
+                Map.of("lessonId", lessonId, "name", "Chủ đề hỏi đáp"))).andExpect(status().isCreated()));
+        String topicId = topic.get("id").asText();
+
+        JsonNode rubric = data(mockMvc.perform(json(auth(post(CONTENT + "/rubrics"), LECTURER_2),
+                Map.of("name", "Rubric câu hỏi", "criteria", List.of(
+                        Map.of("name", "T1", "description", "Mô tả", "weightPercent", 100.0)
+                )))).andExpect(status().isCreated()));
+        String rubricId = rubric.get("id").asText();
+
+        // 1. Create draft question
+        Map<String, Object> questionReq = Map.of(
+                "topicId", topicId,
+                "content", "OOP là gì?",
+                "bloomLevel", "UNDERSTAND",
+                "modelAnswer", "Lập trình hướng đối tượng",
+                "expectedKeywords", List.of("đối tượng", "lớp")
+        );
+        JsonNode created = data(mockMvc.perform(json(auth(post(CONTENT + "/questions"), LECTURER_2), questionReq))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.status").value("DRAFT"))
+                .andExpect(jsonPath("$.data.bloomLevel").value("UNDERSTAND"))
+                .andExpect(jsonPath("$.data.topicId").value(topicId)));
+        String questionId = created.get("id").asText();
+
+        // 2. Update question to APPROVED with rubric
+        Map<String, Object> updateReq = Map.of(
+                "content", "OOP là gì? Cho ví dụ.",
+                "bloomLevel", "APPLY",
+                "rubricId", rubricId,
+                "status", "APPROVED"
+        );
+        mockMvc.perform(json(auth(put(CONTENT + "/questions/" + questionId), LECTURER_2), updateReq))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"))
+                .andExpect(jsonPath("$.data.bloomLevel").value("APPLY"))
+                .andExpect(jsonPath("$.data.rubricId").value(rubricId));
+
+        // Cannot delete topic while containing question
+        expectError(mockMvc.perform(auth(delete(CONTENT + "/topics/" + topicId), LECTURER_2)), 409, "DATA_CONFLICT");
+
+        // Cannot delete rubric while used by question
+        expectError(mockMvc.perform(auth(delete(CONTENT + "/rubrics/" + rubricId), LECTURER_2)), 409, "DATA_CONFLICT");
+
+        // 3. Delete question
+        mockMvc.perform(auth(delete(CONTENT + "/questions/" + questionId), LECTURER_2))
+                .andExpect(status().isOk());
+
+        // Now topic, rubric, lesson can be deleted
+        mockMvc.perform(auth(delete(CONTENT + "/topics/" + topicId), LECTURER_2)).andExpect(status().isOk());
+        mockMvc.perform(auth(delete(CONTENT + "/rubrics/" + rubricId), LECTURER_2)).andExpect(status().isOk());
+        mockMvc.perform(auth(delete(CONTENT + "/lessons/" + lessonId), LECTURER_2)).andExpect(status().isOk());
+    }
+
     /* ========================= HELPER ========================= */
+
 
     private ResultActions uploadQuestions(String email, String fileName, String contentType, byte[] bytes,
                                           String rubricId) throws Exception {

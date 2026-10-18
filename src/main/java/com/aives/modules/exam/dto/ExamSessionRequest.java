@@ -62,4 +62,7 @@ public class ExamSessionRequest {
     @Min(value = 1, message = "Số câu hỏi ít nhất là 1")
     @Max(value = 30, message = "Số câu hỏi không quá 30")
     private Integer questionCount;
+
+    @Schema(example = "false", description = "Cho phép làm bài trên ứng dụng di động (mặc định false)")
+    private Boolean allowMobileExam = false;
 }

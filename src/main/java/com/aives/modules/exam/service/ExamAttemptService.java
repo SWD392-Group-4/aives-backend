@@ -8,7 +8,11 @@ import com.aives.modules.exam.dto.JoinExamRequest;
  */
 public interface ExamAttemptService {
 
-    ExamAttemptResponse joinSession(String studentId, JoinExamRequest request);
+    ExamAttemptResponse joinSession(String studentId, JoinExamRequest request, String platform);
+
+    default ExamAttemptResponse joinSession(String studentId, JoinExamRequest request) {
+        return joinSession(studentId, request, request.getPlatform() != null ? request.getPlatform() : "WEB");
+    }
 
     ExamAttemptResponse getAttempt(String attemptId, String studentId);
 

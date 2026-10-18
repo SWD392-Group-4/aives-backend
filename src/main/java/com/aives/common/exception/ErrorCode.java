@@ -29,6 +29,8 @@ public enum ErrorCode {
     IMPORT_NO_RUBRICS(HttpStatus.BAD_REQUEST, "Không tìm thấy rubric (tiêu chí chấm điểm) nào trong file"),
     GRADE_SCORE_INVALID(HttpStatus.BAD_REQUEST, "Điểm không hợp lệ"),
     GRADE_NOTE_REQUIRED(HttpStatus.BAD_REQUEST, "Điểm chốt lệch quá 2 điểm so với điểm AI gợi ý nên bắt buộc nhập ghi chú giải trình (ít nhất 5 ký tự)"),
+    MOBILE_EXAM_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "Ca thi này không cho phép làm bài trên thiết bị di động. Vui lòng sử dụng máy tính."),
+    RUBRIC_WEIGHT_INVALID(HttpStatus.BAD_REQUEST, "Tổng trọng số các tiêu chí trong Rubric phải bằng đúng 100%"),
     OTP_INVALID(HttpStatus.BAD_REQUEST, "Mã xác thực OTP không đúng"),
     OTP_EXPIRED(HttpStatus.BAD_REQUEST, "Mã xác thực OTP đã hết hạn, vui lòng gửi lại mã mới"),
     OTP_NOT_FOUND(HttpStatus.BAD_REQUEST, "Không tìm thấy yêu cầu xác thực OTP cho email này"),
@@ -43,6 +45,8 @@ public enum ErrorCode {
     // 404 / 409
     NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy tài nguyên"),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"),
+    LESSON_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy bài học"),
+    TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy chủ đề"),
     EXAM_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy phiên thi"),
     EXAM_ATTEMPT_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy lượt thi"),
     QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy câu hỏi"),

@@ -32,6 +32,9 @@ public class SystemSetting {
     @Column(name = "setting_value", nullable = false, length = Length.LONG32)
     private String settingValue;
 
+    @Column(name = "description", length = 500)
+    private String description;
+
     @Column(name = "updated_by", length = 20)
     private String updatedBy;
 

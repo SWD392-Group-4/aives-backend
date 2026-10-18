@@ -12,10 +12,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,8 +34,10 @@ public class ExamAttemptController {
     @PostMapping("/join")
     public ApiResponse<ExamAttemptResponse> joinSession(
             @Valid @RequestBody JoinExamRequest request,
+            @RequestHeader(value = "Platform", required = false, defaultValue = "WEB") String platform,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
-        return ApiResponse.ok("Vào phiên thi thành công", examAttemptService.joinSession(principal.getId(), request));
+        String effectivePlatform = StringUtils.hasText(request.getPlatform()) ? request.getPlatform() : platform;
+        return ApiResponse.ok("Vào phiên thi thành công", examAttemptService.joinSession(principal.getId(), request, effectivePlatform));
     }
 
     @Operation(summary = "Xem lượt thi của mình: hạn làm bài (deadlineAt) và giờ server để đếm ngược")

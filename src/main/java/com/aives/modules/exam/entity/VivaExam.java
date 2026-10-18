@@ -64,6 +64,10 @@ public class VivaExam extends BaseEntity {
     private Integer maxAttempts = 1;
 
     @Builder.Default
+    @Column(name = "allow_mobile_exam", nullable = false)
+    private Boolean allowMobileExam = false;
+
+    @Builder.Default
     @Column(name = "max_follow_up_per_question", nullable = false)
     private Integer maxFollowUpPerQuestion = 2;
 

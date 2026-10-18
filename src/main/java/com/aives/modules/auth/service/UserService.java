@@ -1,16 +1,20 @@
 package com.aives.modules.auth.service;
 
+import com.aives.common.dto.PageResponse;
 import com.aives.modules.auth.dto.ChangePasswordRequest;
 import com.aives.modules.auth.dto.CreateUserRequest;
 import com.aives.modules.auth.dto.CreatedUserResponse;
 import com.aives.modules.auth.dto.RegisterRequest;
 import com.aives.modules.auth.dto.UpdateProfileRequest;
 import com.aives.modules.auth.dto.UserResponse;
+import com.aives.modules.auth.enums.RoleName;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 public interface UserService {
+
+    PageResponse<UserResponse> getUsers(RoleName role, String keyword, int page, int size);
 
     List<UserResponse> getAllUsers();
 

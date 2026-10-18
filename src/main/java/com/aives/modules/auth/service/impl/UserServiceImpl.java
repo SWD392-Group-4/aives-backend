@@ -1,5 +1,6 @@
 package com.aives.modules.auth.service.impl;
 
+import com.aives.common.dto.PageResponse;
 import com.aives.common.exception.BusinessException;
 import com.aives.common.exception.ErrorCode;
 import com.aives.modules.auth.dto.ChangePasswordRequest;
@@ -22,13 +23,19 @@ import com.aives.modules.auth.util.TempPasswordGenerator;
 import com.aives.modules.auth.util.UserIdGenerator;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +49,40 @@ public class UserServiceImpl implements UserService {
     private final TempPasswordGenerator tempPasswordGenerator;
     private final AccountMailService accountMailService;
     private final OtpService otpService;
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<UserResponse> getUsers(RoleName role, String keyword, int page, int size) {
+        Specification<User> spec = (root, query, cb) -> cb.conjunction();
+        if (role != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("role").get("name"), role));
+        }
+        if (StringUtils.hasText(keyword)) {
+            String kw = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("email")), kw),
+                    cb.like(cb.lower(root.get("fullName")), kw),
+                    cb.like(cb.lower(root.get("id")), kw)
+            ));
+        }
+
+        Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                Math.min(Math.max(size, 1), 100),
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<User> result = userRepository.findAll(spec, pageable);
+        List<UserResponse> items = result.getContent().stream()
+                .map(userMapper::toResponse)
+                .toList();
+
+        return new PageResponse<>(
+                items,
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages());
+    }
 
     @Override
     @Transactional(readOnly = true)

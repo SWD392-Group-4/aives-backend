@@ -31,6 +31,7 @@ public class ExamSessionResponse {
     private int durationMinutes;
     // So luot thi toi da cua moi sinh vien
     private int maxAttempts;
+    private boolean allowMobileExam;
     private ExamSessionStatus status;
 
     // So cau hoi goc cua phien. null = so mac dinh cua he thong

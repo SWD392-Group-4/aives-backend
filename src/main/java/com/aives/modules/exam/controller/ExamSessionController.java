@@ -6,6 +6,7 @@ import com.aives.common.security.UserPrincipal;
 import com.aives.modules.exam.dto.DeleteExamSessionResponse;
 import com.aives.modules.exam.dto.ExamSessionRequest;
 import com.aives.modules.exam.dto.ExamSessionResponse;
+import com.aives.modules.exam.dto.LiveExamMonitorResponse;
 import com.aives.modules.exam.service.ExamSessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -90,5 +91,14 @@ public class ExamSessionController {
             @PathVariable String id,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
         return ApiResponse.ok("Đã tạo mã truy cập mới", examSessionService.regeneratePasscode(id, principal));
+    }
+
+    @Operation(summary = "Giám sát phòng thi trực tiếp theo thời gian thực (Live Exam Monitor)")
+    @GetMapping("/{id}/monitor")
+    @PreAuthorize("hasAnyRole('LECTURER', 'ADMIN')")
+    public ApiResponse<LiveExamMonitorResponse> getLiveExamMonitor(
+            @PathVariable String id,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok(examSessionService.getLiveExamMonitor(id, principal));
     }
 }

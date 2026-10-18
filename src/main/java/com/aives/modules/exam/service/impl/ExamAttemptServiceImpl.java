@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -41,6 +42,11 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
      */
     @Override
     public ExamAttemptResponse joinSession(String studentId, JoinExamRequest request) {
+        return joinSession(studentId, request, request.getPlatform() != null ? request.getPlatform() : "WEB");
+    }
+
+    @Override
+    public ExamAttemptResponse joinSession(String studentId, JoinExamRequest request, String platform) {
         // 1. Dang bi khoa vi nhap sai nhieu lan
         long lockedSeconds = joinAttemptLimiter.secondsUntilUnlocked(studentId);
         if (lockedSeconds > 0) {
@@ -71,6 +77,13 @@ public class ExamAttemptServiceImpl implements ExamAttemptService {
         // 4. Tu day sinh vien da co ma dung nen duoc biet trang thai that cua phien
         if (exam.isCancelled()) {
             throw new BusinessException(ErrorCode.EXAM_SESSION_CANCELLED);
+        }
+
+        // Kiem tra chan thiet bi di dong neu phien thi khong cho phep
+        String effectivePlatform = StringUtils.hasText(request.getPlatform()) ? request.getPlatform() : platform;
+        if ("MOBILE".equalsIgnoreCase(effectivePlatform) && !Boolean.TRUE.equals(exam.getAllowMobileExam())) {
+            throw new BusinessException(ErrorCode.MOBILE_EXAM_NOT_ALLOWED,
+                    "Ca thi này không cho phép làm bài trên thiết bị di động. Vui lòng sử dụng máy tính.");
         }
 
         LocalDateTime now = now();

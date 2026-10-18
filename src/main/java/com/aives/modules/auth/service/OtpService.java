@@ -13,11 +13,19 @@ public interface OtpService {
     void sendRegistrationOtp(String email);
 
     /**
+     * Sinh và gửi mã OTP đặt lại mật khẩu tới email.
+     * Kiểm tra email đã tồn tại và tôn trọng cooldown 60 giây.
+     *
+     * @param email Địa chỉ email nhận OTP
+     */
+    void sendPasswordResetOtp(String email);
+
+    /**
      * Xác thực và đánh dấu đã sử dụng mã OTP.
      *
      * @param email Email nhận mã
      * @param otpCode Mã OTP cần kiểm tra
-     * @param type Loại OTP (ví dụ REGISTRATION)
+     * @param type Loại OTP (ví dụ REGISTRATION, PASSWORD_RESET)
      */
     void verifyAndConsumeOtp(String email, String otpCode, OtpType type);
 }
