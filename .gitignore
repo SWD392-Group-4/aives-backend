@@ -12,7 +12,7 @@ target/
 .classpath
 .project
 .settings/
-
+node_modules
 ### Env / secrets ###
 .env
 .env.*

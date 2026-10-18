@@ -26,6 +26,7 @@ public class SecurityConfig {
     // API khong can dang nhap
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/auth/login",
+            "/api/auth/google",
             "/api/auth/register",
             "/api/auth/send-otp",
             "/api/auth/forgot-password",

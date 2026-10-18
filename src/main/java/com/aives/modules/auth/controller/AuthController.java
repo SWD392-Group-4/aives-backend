@@ -4,6 +4,7 @@ import com.aives.common.dto.ApiResponse;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.auth.dto.ChangePasswordRequest;
 import com.aives.modules.auth.dto.ForgotPasswordRequest;
+import com.aives.modules.auth.dto.GoogleLoginRequest;
 import com.aives.modules.auth.dto.LoginRequest;
 import com.aives.modules.auth.dto.LoginResponse;
 import com.aives.modules.auth.dto.RegisterRequest;
@@ -79,6 +80,13 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.ok("Đăng nhập thành công", authService.login(request));
+    }
+
+    @Operation(summary = "Đăng nhập bằng tài khoản Google")
+    @SecurityRequirements // API nay khong can token
+    @PostMapping("/google")
+    public ApiResponse<LoginResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        return ApiResponse.ok("Đăng nhập bằng Google thành công", authService.loginWithGoogle(request));
     }
 
     @Operation(summary = "Đăng xuất, vô hiệu hoá token hiện tại")

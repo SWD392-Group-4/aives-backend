@@ -12,10 +12,17 @@ import org.springframework.stereotype.Component;
 public class RandomIdGenerator {
 
     private static final long BOUND = 10_000_000_000L;
+    private static final SecureRandom STATIC_RANDOM = new SecureRandom();
 
     private final SecureRandom random = new SecureRandom();
 
     public String next(String prefix) {
         return prefix + String.format("%010d", random.nextLong(BOUND));
+    }
+
+    public static String generate(String prefix, int digits) {
+        long bound = (long) Math.pow(10, digits);
+        long num = Math.abs(STATIC_RANDOM.nextLong()) % bound;
+        return prefix + String.format("%0" + digits + "d", num);
     }
 }

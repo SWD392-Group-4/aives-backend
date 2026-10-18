@@ -31,3 +31,11 @@ services:
         value: Aives@123
       - key: MAIL_ENABLED
         value: "false"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/rag-key.json
+      - key: GOOGLE_SPEECH_CREDENTIALS
+        value: /etc/secrets/rag-key.json

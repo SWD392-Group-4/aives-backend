@@ -26,10 +26,8 @@ public class AivesApplication {
 
     public static void main(String[] args) {
         boolean isDeploy = isDeployEnvironment();
-        boolean envLoaded = false;
-        if (!isDeploy) {
-            envLoaded = loadDotEnv();
-        }
+        // Luôn thử nạp .env (bao gồm Render Secret Files: /etc/secrets/.env hoặc thư mục app)
+        boolean envLoaded = loadDotEnv();
         validateEnvironment(envLoaded, isDeploy);
         SpringApplication.run(AivesApplication.class, args);
     }
@@ -82,15 +80,23 @@ public class AivesApplication {
 
     /**
      * Tự động nạp biến môi trường từ file .env nếu tồn tại
+     * Hỗ trợ cả môi trường Local Dev lẫn Render Secret Files (/etc/secrets/.env)
      */
     private static boolean loadDotEnv() {
-        Path[] possiblePaths = new Path[]{
-                Path.of(".env"),
-                Path.of("../.env")
-        };
+        List<Path> possiblePaths = new ArrayList<>();
+        String customPath = System.getenv("ENV_FILE_PATH");
+        if (customPath != null && !customPath.isBlank()) {
+            possiblePaths.add(Path.of(customPath.trim()));
+        }
+        // Vị trí Secret Files tiêu chuẩn trên Render
+        possiblePaths.add(Path.of("/etc/secrets/.env"));
+        possiblePaths.add(Path.of("/etc/secrets/aives.env"));
+        // Vị trí cục bộ
+        possiblePaths.add(Path.of(".env"));
+        possiblePaths.add(Path.of("../.env"));
 
         for (Path path : possiblePaths) {
-            if (Files.exists(path)) {
+            if (Files.isRegularFile(path) && Files.isReadable(path)) {
                 try {
                     List<String> lines = Files.readAllLines(path);
                     for (String line : lines) {
@@ -99,11 +105,22 @@ public class AivesApplication {
                             int idx = line.indexOf('=');
                             String key = line.substring(0, idx).trim();
                             String value = line.substring(idx + 1).trim();
-                            if (System.getProperty(key) == null && System.getenv(key) == null) {
+
+                            // Bỏ dấu nháy kép hoặc đơn nếu có bọc quanh giá trị
+                            if ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'"))) {
+                                if (value.length() >= 2) {
+                                    value = value.substring(1, value.length() - 1);
+                                }
+                            }
+
+                            // Chỉ gán nếu biến môi trường hệ thống chưa có hoặc bị rỗng
+                            String existingEnv = System.getenv(key);
+                            if (System.getProperty(key) == null && (existingEnv == null || existingEnv.isBlank())) {
                                 System.setProperty(key, value);
                             }
                         }
                     }
+                    System.out.println("✅ [AIVES Backend] Đã nạp thành công biến môi trường từ file: " + path.toAbsolutePath());
                     return true;
                 } catch (IOException e) {
                     System.err.println("Could not load .env from " + path + ": " + e.getMessage());
@@ -115,12 +132,16 @@ public class AivesApplication {
 
     /**
      * Báo lỗi rõ ràng và dừng chương trình:
-     * - Ở chế độ Deploy (Render): Bỏ qua check file .env, chỉ validate các biến bắt buộc trong OS env.
+     * - Ở chế độ Deploy (Render): Kiểm tra nếu đã nạp file .env từ Secret Files hoặc dùng biến môi trường hệ thống.
      * - Ở chế độ Local Dev: Kiểm tra file .env và so sánh đồng bộ với .env.example.
      */
     private static void validateEnvironment(boolean envFileLoaded, boolean isDeploy) {
         if (isDeploy) {
-            System.out.println("\n🚀 [AIVES Backend] Đang chạy ở môi trường DEPLOY/PRODUCTION: Bỏ qua kiểm tra file .env cục bộ.");
+            if (envFileLoaded) {
+                System.out.println("\n🚀 [AIVES Backend] Đang chạy ở môi trường DEPLOY: Đã nạp cấu hình từ Secret File .env.");
+            } else {
+                System.out.println("\n🚀 [AIVES Backend] Đang chạy ở môi trường DEPLOY/PRODUCTION: Không phát hiện Secret File .env, sử dụng trực tiếp biến môi trường Render.");
+            }
         } else {
             Path envPath = Path.of(".env");
             Path examplePath = Path.of(".env.example");
