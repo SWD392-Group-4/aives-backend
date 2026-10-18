@@ -80,6 +80,8 @@ public enum ErrorCode {
     AI_REQUEST_FAILED(HttpStatus.BAD_GATEWAY, "AI không xử lý được yêu cầu, vui lòng thử lại"),
     AI_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "Hệ thống chưa bật AI (thiếu GEMINI_API_KEY) nên chưa dùng được chức năng này"),
     MAIL_SEND_FAILED(HttpStatus.BAD_GATEWAY, "Không gửi được email. Vui lòng kiểm tra địa chỉ email và cấu hình gửi mail rồi thử lại"),
+    SPEECH_REQUEST_FAILED(HttpStatus.BAD_GATEWAY, "Không xử lý được giọng nói, vui lòng thử lại"),
+    SPEECH_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "Hệ thống chưa bật chuyển giọng nói (thiếu GOOGLE_SPEECH_CREDENTIALS) nên chưa dùng được chức năng này"),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống");
 
     private final HttpStatus status;

@@ -70,6 +70,13 @@ app:
       # low = tra loi nhanh nhat. De trong = dung mac dinh cua model.
       thinking-level: ${GEMINI_THINKING_LEVEL:low}
       thinking-budget: ${GEMINI_THINKING_BUDGET:-1}
+  # Google Cloud Speech-to-Text (STT) + Text-to-Speech (TTS). De trong GOOGLE_SPEECH_CREDENTIALS = tat (app van chay).
+  speech:
+    credentials-path: ${GOOGLE_SPEECH_CREDENTIALS:}
+    language-code: ${SPEECH_LANGUAGE_CODE:vi-VN}
+    sample-rate-hertz: ${SPEECH_SAMPLE_RATE_HERTZ:48000}
+    voice-name: ${TTS_VOICE_NAME:vi-VN-Standard-A}
+    speaking-rate: ${TTS_SPEAKING_RATE:1.0}
   viva:
     default-question-count: ${VIVA_DEFAULT_QUESTION_COUNT:3}
   grading:

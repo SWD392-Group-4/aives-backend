@@ -21,7 +21,21 @@
         <jjwt.version>0.12.6</jjwt.version>
         <springdoc.version>2.8.9</springdoc.version>
         <pdfbox.version>2.0.32</pdfbox.version>
+        <google-cloud-bom.version>26.50.0</google-cloud-bom.version>
     </properties>
+
+    <!-- Google Cloud BOM: quan ly version cho google-cloud-speech / google-cloud-texttospeech -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>libraries-bom</artifactId>
+                <version>${google-cloud-bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -93,6 +107,15 @@
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>${pdfbox.version}</version>
+        </dependency>
+        <!-- Google Cloud Speech-to-Text (STT) va Text-to-Speech (TTS) cho phong thi van dap -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-speech</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-texttospeech</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
