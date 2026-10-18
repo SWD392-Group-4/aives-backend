@@ -222,6 +222,14 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
     /* ========================= NOI BO ========================= */
 
     /** Du lieu cua 1 luot thi tai 1 thoi diem. Chi dung trong transaction. */
+    /* ========================= GIONG NOI (STT / TTS) ========================= */
+
+    @Override
+    public String currentQuestionText(String attemptId, String studentId, String exchangeId) {
+        requireRunning(attemptId, studentId);
+        return transactionTemplate.execute(status -> requireCurrent(load(attemptId), exchangeId).getQuestionText());
+    }
+
     private record Snapshot(VivaAttempt attempt, List<VivaExamQuestion> questions, List<InterviewExchange> exchanges) {
 
         InterviewExchange latest() {
