@@ -41,6 +41,9 @@ public class InterviewStateResponse {
 
     private String questionText;
 
+    // Hinh ve cua cau hoi goc (data:image/png;base64,...), null = cau hoi khong co hinh
+    private String questionImage;
+
     // Cau hoi goc thu may (bat dau tu 1)
     private Integer questionNo;
 

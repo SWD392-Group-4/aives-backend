@@ -7,6 +7,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.aives.modules.content.entity.QuestionFigure;
+import com.aives.modules.content.repository.QuestionFigureRepository;
+import com.aives.modules.vivaroom.repository.InterviewExchangeRepository;
 import com.aives.testsupport.AiTestBeans;
 import com.aives.testsupport.ApiTestSupport;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,10 +18,12 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * Test luong phong van AI tren H2 (profile dev). KHONG goi Gemini that:
@@ -69,6 +74,50 @@ class VivaInterviewApiTest extends ApiTestSupport {
         JsonNode second = data(startInterview(student, attemptId).andExpect(status().isOk()));
         assertThat(second.get("exchangeId").asText()).isEqualTo(first.get("exchangeId").asText());
         assertThat(llm.calls()).isZero();
+    }
+
+    @Autowired
+    private InterviewExchangeRepository exchangeRepository;
+
+    @Autowired
+    private QuestionFigureRepository figureRepository;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
+    @Test
+    void questionWithFigure_showsFigureForMainAndFollowUpQuestions() throws Exception {
+        String student = student(1);
+        String attemptId = joinNewSession(LECTURER_1, student);
+        JsonNode main = data(startInterview(student, attemptId));
+        // Cau hoi mau khong co hinh
+        assertThat(main.has("questionImage")).isFalse();
+
+        String questionId = transactionTemplate.execute(status -> exchangeRepository
+                .findById(main.get("exchangeId").asText()).orElseThrow().getExamQuestion().getQuestion().getId());
+        QuestionFigure figure = QuestionFigure.builder()
+                .contentType("image/png")
+                .imageData(new byte[] {1, 2, 3})
+                .width(10)
+                .height(10)
+                .sourcePage(1)
+                .build();
+        figure.setId(questionId);
+        figureRepository.save(figure);
+        try {
+            startInterview(student, attemptId)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.questionImage").value("data:image/png;base64,AQID"));
+
+            // Cau hoi xoay van kem hinh cua cau goc
+            llm.willReturn(followUpJson("INCOMPLETE", "Vì sao x bằng 55 độ?"));
+            answer(student, attemptId, main.get("exchangeId").asText(), "x bằng 55 độ")
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.type").value("FOLLOW_UP"))
+                    .andExpect(jsonPath("$.data.questionImage").value("data:image/png;base64,AQID"));
+        } finally {
+            figureRepository.deleteById(questionId);
+        }
     }
 
     /* ========================= HOI XOAY ========================= */

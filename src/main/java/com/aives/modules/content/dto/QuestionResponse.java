@@ -29,6 +29,8 @@ public class QuestionResponse {
     private String source;
     // DRAFT / APPROVED / REJECTED / ARCHIVED
     private String status;
+    // true = cau hoi co hinh ve (lay hinh qua GET /api/content/questions/{id}/figure)
+    private boolean hasFigure;
     private Instant createdAt;
     private Instant updatedAt;
 }

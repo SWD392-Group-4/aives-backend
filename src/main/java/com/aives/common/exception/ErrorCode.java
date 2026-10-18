@@ -46,6 +46,7 @@ public enum ErrorCode {
     EXAM_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy phiên thi"),
     EXAM_ATTEMPT_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy lượt thi"),
     QUESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy câu hỏi"),
+    QUESTION_FIGURE_NOT_FOUND(HttpStatus.NOT_FOUND, "Câu hỏi không có hình vẽ"),
     RUBRIC_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy rubric"),
     QUESTION_GRADE_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy điểm của câu hỏi"),
     APPEAL_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy đơn phúc khảo"),

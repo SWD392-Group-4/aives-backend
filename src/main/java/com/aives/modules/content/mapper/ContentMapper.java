@@ -65,6 +65,10 @@ public class ContentMapper {
     }
 
     public QuestionResponse toQuestionResponse(Question question) {
+        return toQuestionResponse(question, false);
+    }
+
+    public QuestionResponse toQuestionResponse(Question question, boolean hasFigure) {
         return QuestionResponse.builder()
                 .id(question.getId())
                 .topicId(question.getTopic().getId())
@@ -78,6 +82,7 @@ public class ContentMapper {
                 .expectedKeywords(parseKeywords(question.getExpectedKeywords()))
                 .source(question.getSource())
                 .status(question.getStatus())
+                .hasFigure(hasFigure)
                 .createdAt(toInstant(question.getCreatedAt()))
                 .updatedAt(toInstant(question.getUpdatedAt()))
                 .build();
