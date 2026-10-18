@@ -740,7 +740,7 @@ public class GoogleCloudRagService {
     private String callVertexAiRag(String prompt) throws Exception {
         String token = getAccessToken();
         String url = String.format(
-                "https://%s-aiplatform.googleapis.com/v1beta1/projects/%s/locations/%s/publishers/google/models/gemini-1.5-flash:generateContent",
+                "https://%s-aiplatform.googleapis.com/v1beta1/projects/%s/locations/%s/publishers/google/models/gemini-2.5-flash:generateContent",
                 location, projectId, location);
 
         Map<String, Object> requestBody = Map.of(
