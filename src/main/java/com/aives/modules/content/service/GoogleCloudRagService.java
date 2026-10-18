@@ -65,7 +65,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class GoogleCloudRagService {
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pptx", "ppt", "pdf", "docx");
@@ -97,10 +96,33 @@ public class GoogleCloudRagService {
     private final RandomIdGenerator idGenerator;
     private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    public GoogleCloudRagService(
+            MaterialRepository materialRepository,
+            LessonRepository lessonRepository,
+            TopicRepository topicRepository,
+            RubricRepository rubricRepository,
+            RubricCriterionRepository criterionRepository,
+            QuestionRepository questionRepository,
+            ContentMapper contentMapper,
+            RandomIdGenerator idGenerator,
+            LlmClient llmClient,
+            ObjectMapper objectMapper) {
+        this.materialRepository = materialRepository;
+        this.lessonRepository = lessonRepository;
+        this.topicRepository = topicRepository;
+        this.rubricRepository = rubricRepository;
+        this.criterionRepository = criterionRepository;
+        this.questionRepository = questionRepository;
+        this.contentMapper = contentMapper;
+        this.idGenerator = idGenerator;
+        this.llmClient = llmClient;
+        this.objectMapper = objectMapper;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+    }
 
     private Storage storageClient;
     private GoogleCredentials cachedCredentials;
