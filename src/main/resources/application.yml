@@ -80,6 +80,13 @@ app:
     sample-rate-hertz: ${SPEECH_SAMPLE_RATE_HERTZ:48000}
     voice-name: ${TTS_VOICE_NAME:vi-VN-Standard-A}
     speaking-rate: ${TTS_SPEAKING_RATE:1.0}
+  # Google Cloud Vertex AI RAG & Cloud Storage cho FLOW-LECTURER-PREP-001
+  rag:
+    project-id: ${GOOGLE_RAG_PROJECT_ID:precise-ray-512018-v9}
+    location: ${GOOGLE_RAG_LOCATION:asia-southeast1}
+    bucket-name: ${GOOGLE_RAG_BUCKET:exam-slides-bucket-2026}
+    corpus-id: ${GOOGLE_RAG_CORPUS_ID:6917529027641081856}
+    credentials-path: ${GOOGLE_RAG_CREDENTIALS:../rag-key.json}
   viva:
     default-question-count: ${VIVA_DEFAULT_QUESTION_COUNT:3}
   grading:

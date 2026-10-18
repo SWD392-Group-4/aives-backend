@@ -12,6 +12,8 @@ import com.aives.modules.content.dto.CreateTopicRequest;
 import com.aives.modules.content.dto.LessonResponse;
 import com.aives.modules.content.dto.QuestionFigureResponse;
 import com.aives.modules.content.dto.QuestionResponse;
+import com.aives.modules.content.dto.GenerateQuestionsFromRagRequest;
+import com.aives.modules.content.dto.MaterialResponse;
 import com.aives.modules.content.dto.QuestionStatusRequest;
 import com.aives.modules.content.dto.RubricResponse;
 import com.aives.modules.content.dto.TopicResponse;
@@ -21,6 +23,7 @@ import com.aives.modules.content.dto.UpdateRubricRequest;
 import com.aives.modules.content.dto.UpdateTopicRequest;
 import com.aives.modules.content.service.ContentImportService;
 import com.aives.modules.content.service.ContentService;
+import com.aives.modules.content.service.GoogleCloudRagService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -53,6 +56,7 @@ public class ContentController {
 
     private final ContentService contentService;
     private final ContentImportService contentImportService;
+    private final GoogleCloudRagService ragService;
 
     @Operation(summary = "Danh sách bài học")
     @GetMapping("/lessons")
@@ -240,4 +244,57 @@ public class ContentController {
             throw new BusinessException(ErrorCode.IMPORT_FILE_INVALID, "Không đọc được file gửi lên");
         }
     }
+
+    // ==================== FLOW-LECTURER-PREP-001: RAG MATERIALS & AI QUESTION GEN ====================
+
+    @Operation(summary = "Danh sách học liệu RAG (slide, tài liệu) của giảng viên (hoặc tất cả nếu ADMIN)")
+    @GetMapping("/materials")
+    public ApiResponse<List<MaterialResponse>> listMaterials(
+            @RequestParam(required = false) String lessonId,
+            @RequestParam(required = false) String topicId,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok(ragService.listMaterials(principal, lessonId, topicId));
+    }
+
+    @Operation(summary = "Tải lên tài liệu/slide (.pptx, .ppt, .pdf, .docx), lưu GCS và tự động lập chỉ mục RAG Corpus")
+    @PostMapping(value = "/materials/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<MaterialResponse> uploadMaterial(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "lessonId", required = false) String lessonId,
+            @RequestParam(value = "topicId", required = false) String topicId,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        MaterialResponse response = ragService.uploadMaterial(principal, file, title, lessonId, topicId);
+        return ApiResponse.ok("Tải lên học liệu thành công, đang lập chỉ mục RAG", response);
+    }
+
+    @Operation(summary = "Xoá tài liệu học liệu khỏi hệ thống và GCS")
+    @DeleteMapping("/materials/{id}")
+    public ApiResponse<Void> deleteMaterial(
+            @PathVariable String id,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        ragService.deleteMaterial(principal, id);
+        return ApiResponse.ok("Xoá học liệu thành công", null);
+    }
+
+    @Operation(summary = "Lập chỉ mục lại (Reindex) tài liệu vào RAG Corpus")
+    @PostMapping("/materials/{id}/reindex")
+    public ApiResponse<MaterialResponse> reindexMaterial(
+            @PathVariable String id,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        MaterialResponse response = ragService.reindexMaterial(principal, id);
+        return ApiResponse.ok("Đã kích hoạt lập chỉ mục lại học liệu", response);
+    }
+
+    @Operation(summary = "Sinh câu hỏi thi vấn đáp và Rubric đánh giá từ tài liệu RAG đã sẵn sàng (READY)")
+    @PostMapping("/questions/generate-from-rag")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<List<QuestionResponse>> generateQuestionsFromRag(
+            @Valid @RequestBody GenerateQuestionsFromRagRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        List<QuestionResponse> questions = ragService.generateQuestionsFromRag(principal, request);
+        return ApiResponse.ok("Đã sinh thành công " + questions.size() + " câu hỏi Grounded AI kèm Rubric chuẩn", questions);
+    }
 }
+

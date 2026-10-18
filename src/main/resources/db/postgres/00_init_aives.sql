@@ -174,6 +174,30 @@ CREATE TABLE IF NOT EXISTS question_figures (
     CONSTRAINT fk_question_figures_question FOREIGN KEY (questions_id) REFERENCES questions (questions_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS materials (
+    id            VARCHAR(50)  NOT NULL,
+    lecturer_id   VARCHAR(50)  NOT NULL,
+    lesson_id     VARCHAR(50)  NULL,
+    topic_id      VARCHAR(50)  NULL,
+    title         VARCHAR(255) NOT NULL,
+    file_name     VARCHAR(255) NOT NULL,
+    file_size     BIGINT       NOT NULL,
+    file_type     VARCHAR(20)  NOT NULL,
+    gcs_uri       VARCHAR(500) NOT NULL,
+    rag_corpus_id VARCHAR(100) NOT NULL DEFAULT '6917529027641081856',
+    rag_status    VARCHAR(30)  NOT NULL DEFAULT 'INDEXING',
+    chunk_count   INTEGER      NOT NULL DEFAULT 0,
+    error_message TEXT         NULL,
+    created_at    TIMESTAMP(6) NOT NULL DEFAULT LOCALTIMESTAMP,
+
+    CONSTRAINT pk_materials PRIMARY KEY (id),
+    CONSTRAINT ck_materials_status CHECK (rag_status IN ('INDEXING', 'READY', 'FAILED'))
+);
+
+CREATE INDEX IF NOT EXISTS ix_materials_lecturer ON materials (lecturer_id);
+CREATE INDEX IF NOT EXISTS ix_materials_lesson ON materials (lesson_id);
+CREATE INDEX IF NOT EXISTS ix_materials_topic ON materials (topic_id);
+
 /* =====================================================================
    3. PHIEN THI VA LUOT THI
    ===================================================================== */
