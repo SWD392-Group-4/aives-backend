@@ -20,6 +20,7 @@
         <java.version>17</java.version>
         <jjwt.version>0.12.6</jjwt.version>
         <springdoc.version>2.8.9</springdoc.version>
+        <pdfbox.version>2.0.32</pdfbox.version>
     </properties>
 
     <dependencies>
@@ -86,6 +87,12 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <!-- Doc file PDF cau hoi: ve trang PDF thanh anh de cat hinh ve (hinh hoc, so do) cua tung cau hoi -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

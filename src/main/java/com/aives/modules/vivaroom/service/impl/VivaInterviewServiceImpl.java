@@ -10,6 +10,7 @@ import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.content.entity.Question;
 import com.aives.modules.content.repository.QuestionRepository;
 import com.aives.modules.content.repository.RubricCriterionRepository;
+import com.aives.modules.content.service.ContentService;
 import com.aives.modules.exam.dto.ExamAttemptResponse;
 import com.aives.modules.exam.entity.VivaAttempt;
 import com.aives.modules.exam.entity.VivaExam;
@@ -77,6 +78,7 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
     private final InterviewExchangeRepository exchangeRepository;
     private final QuestionRepository questionRepository;
     private final RubricCriterionRepository criterionRepository;
+    private final ContentService contentService;
     private final ExamAttemptService examAttemptService;
     private final FollowUpDecisionService followUpDecisionService;
     private final LlmClient llmClient;
@@ -438,6 +440,8 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
                 .exchangeId(latest.getId())
                 .type(latest.getDepth() == 0 ? "MAIN" : "FOLLOW_UP")
                 .questionText(latest.getQuestionText())
+                // Cau hoi xoay van hien hinh cua cau goc (sinh vien can nhin hinh de tra loi tiep)
+                .questionImage(contentService.findQuestionFigureDataUrl(question.getId()).orElse(null))
                 .questionNo(questionNoOf(snapshot.questions(), latest))
                 .followUpNo(latest.getDepth())
                 .maxFollowUps(exam.getMaxFollowUpPerQuestion())

@@ -1,5 +1,5 @@
 -- =====================================================================
--- AIVES - Script khoi tao database cho PostgreSQL (14+): 18 bang
+-- AIVES - Script khoi tao database cho PostgreSQL (14+): 19 bang
 --
 --   Tai khoan : roles, users
 --   Noi dung  : lessons, topics, rubrics, rubric_criteria, questions
@@ -158,6 +158,21 @@ CREATE TABLE IF NOT EXISTS questions (
 );
 
 CREATE INDEX IF NOT EXISTS ix_questions_topic_status ON questions (topics_id, status);
+
+-- Hinh ve cua cau hoi (cat tu file PDF giang vien gui len). 1 cau hoi toi da 1 hinh, khoa chinh = khoa cua cau hoi.
+CREATE TABLE IF NOT EXISTS question_figures (
+    questions_id  VARCHAR(20)  NOT NULL,
+    content_type  VARCHAR(50)  NOT NULL,
+    image_data    BYTEA        NOT NULL,
+    width         INTEGER      NOT NULL,
+    height        INTEGER      NOT NULL,
+    source_page   INTEGER      NULL,       -- trang trong file PDF (bat dau tu 1)
+    created_at    TIMESTAMP(6) NOT NULL DEFAULT LOCALTIMESTAMP,
+    updated_at    TIMESTAMP(6) NOT NULL DEFAULT LOCALTIMESTAMP,
+
+    CONSTRAINT pk_question_figures          PRIMARY KEY (questions_id),
+    CONSTRAINT fk_question_figures_question FOREIGN KEY (questions_id) REFERENCES questions (questions_id) ON DELETE CASCADE
+);
 
 /* =====================================================================
    3. PHIEN THI VA LUOT THI

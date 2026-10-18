@@ -6,6 +6,7 @@ import com.aives.common.exception.ErrorCode;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.content.dto.ContentImportResponse;
 import com.aives.modules.content.dto.LessonResponse;
+import com.aives.modules.content.dto.QuestionFigureResponse;
 import com.aives.modules.content.dto.QuestionResponse;
 import com.aives.modules.content.dto.QuestionStatusRequest;
 import com.aives.modules.content.dto.RubricResponse;
@@ -72,6 +73,14 @@ public class ContentController {
             @RequestParam(required = false) String topicId,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
         return ApiResponse.ok(contentService.listQuestions(principal, topicId));
+    }
+
+    @Operation(summary = "Hình vẽ của câu hỏi (cắt từ file PDF lúc nhập), dạng data URL để gắn thẳng vào thẻ img")
+    @GetMapping("/questions/{questionId}/figure")
+    public ApiResponse<QuestionFigureResponse> getQuestionFigure(
+            @PathVariable String questionId,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok(contentService.getQuestionFigure(principal, questionId));
     }
 
     @Operation(summary = "Đổi trạng thái câu hỏi: APPROVED (duyệt, phải có rubric), REJECTED, ARCHIVED, DRAFT")
