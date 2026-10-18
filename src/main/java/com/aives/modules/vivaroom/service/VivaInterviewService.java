@@ -17,6 +17,12 @@ public interface VivaInterviewService {
     /** Bo qua cau hoi hien tai (ca cac cau hoi xoay cua no), chuyen sang cau hoi goc tiep theo. */
     InterviewStateResponse skip(String attemptId, String studentId, String exchangeId);
 
+    /**
+     * Noi dung cau hoi DANG CHO tra loi (dung exchangeId FE gui len) cua luot thi dang lam.
+     * Dung de doc cau hoi thanh giong noi (TTS) va kiem tra truoc khi chuyen audio cau tra loi thanh chu (STT).
+     */
+    String currentQuestionText(String attemptId, String studentId, String exchangeId);
+
     /** Toan bo luot hoi - dap cua 1 luot thi, cho nguoi tao phien hoac admin xem lai. */
     List<InterviewExchangeResponse> listExchanges(String attemptId, UserPrincipal actor);
 }

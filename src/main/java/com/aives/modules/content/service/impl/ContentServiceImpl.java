@@ -5,16 +5,19 @@ import com.aives.common.exception.ErrorCode;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.content.dto.LessonResponse;
+import com.aives.modules.content.dto.QuestionFigureResponse;
 import com.aives.modules.content.dto.QuestionResponse;
 import com.aives.modules.content.dto.RubricResponse;
 import com.aives.modules.content.dto.TopicResponse;
 import com.aives.modules.content.entity.Lesson;
 import com.aives.modules.content.entity.Question;
+import com.aives.modules.content.entity.QuestionFigure;
 import com.aives.modules.content.entity.Rubric;
 import com.aives.modules.content.entity.RubricCriterion;
 import com.aives.modules.content.entity.Topic;
 import com.aives.modules.content.mapper.ContentMapper;
 import com.aives.modules.content.repository.LessonRepository;
+import com.aives.modules.content.repository.QuestionFigureRepository;
 import com.aives.modules.content.repository.QuestionRepository;
 import com.aives.modules.content.repository.RubricCriterionRepository;
 import com.aives.modules.content.repository.RubricRepository;
@@ -22,10 +25,14 @@ import com.aives.modules.content.repository.TopicRepository;
 import com.aives.modules.content.service.ContentService;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +49,7 @@ public class ContentServiceImpl implements ContentService {
     private final RubricRepository rubricRepository;
     private final RubricCriterionRepository criterionRepository;
     private final QuestionRepository questionRepository;
+    private final QuestionFigureRepository figureRepository;
     private final ContentMapper contentMapper;
 
     @Override
@@ -152,11 +160,17 @@ public class ContentServiceImpl implements ContentService {
         if (lessonIds.isEmpty()) {
             return List.of();
         }
-        List<QuestionResponse> result = new ArrayList<>();
+        List<Question> questions = new ArrayList<>();
         for (Question question : questionRepository.findWithTopicByLessonIds(lessonIds)) {
             if (topicId == null || topicId.isBlank() || topicId.equals(question.getTopic().getId())) {
-                result.add(contentMapper.toQuestionResponse(question));
+                questions.add(question);
             }
+        }
+        Set<String> withFigure = questions.isEmpty() ? Set.of()
+                : new HashSet<>(figureRepository.findQuestionIdsWithFigure(questions.stream().map(Question::getId).toList()));
+        List<QuestionResponse> result = new ArrayList<>();
+        for (Question question : questions) {
+            result.add(contentMapper.toQuestionResponse(question, withFigure.contains(question.getId())));
         }
         return result;
     }
@@ -164,10 +178,7 @@ public class ContentServiceImpl implements ContentService {
     @Override
     @Transactional
     public QuestionResponse changeQuestionStatus(UserPrincipal actor, String questionId, String status, String rubricId) {
-        // Cau hoi cua giang vien khac cung bao "khong tim thay", khong de lo la cau hoi do co ton tai
-        Question question = questionRepository.findWithTopicById(questionId)
-                .filter(found -> isAdmin(actor) || found.getTopic().getLesson().getLecturerId().equals(actor.getId()))
-                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
+        Question question = requireOwnQuestion(actor, questionId);
 
         if (rubricId != null && !rubricId.isBlank()) {
             Rubric rubric = rubricRepository.findById(rubricId.trim())
@@ -192,7 +203,38 @@ public class ContentServiceImpl implements ContentService {
             }
         }
         question.setStatus(status);
-        return contentMapper.toQuestionResponse(questionRepository.save(question));
+        return contentMapper.toQuestionResponse(questionRepository.save(question), figureRepository.existsById(questionId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public QuestionFigureResponse getQuestionFigure(UserPrincipal actor, String questionId) {
+        requireOwnQuestion(actor, questionId);
+        QuestionFigure figure = figureRepository.findById(questionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_FIGURE_NOT_FOUND));
+        return QuestionFigureResponse.builder()
+                .questionId(questionId)
+                .dataUrl(toDataUrl(figure))
+                .width(figure.getWidth())
+                .height(figure.getHeight())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> findQuestionFigureDataUrl(String questionId) {
+        return figureRepository.findById(questionId).map(this::toDataUrl);
+    }
+
+    private String toDataUrl(QuestionFigure figure) {
+        return "data:" + figure.getContentType() + ";base64," + Base64.getEncoder().encodeToString(figure.getImageData());
+    }
+
+    /** Cau hoi cua giang vien khac cung bao "khong tim thay", khong de lo la cau hoi do co ton tai. */
+    private Question requireOwnQuestion(UserPrincipal actor, String questionId) {
+        return questionRepository.findWithTopicById(questionId)
+                .filter(found -> isAdmin(actor) || found.getTopic().getLesson().getLecturerId().equals(actor.getId()))
+                .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_NOT_FOUND));
     }
 
     private List<Lesson> visibleLessons(UserPrincipal actor) {

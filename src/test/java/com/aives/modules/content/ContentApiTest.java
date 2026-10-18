@@ -168,6 +168,71 @@ class ContentApiTest extends ApiTestSupport {
     }
 
     @Test
+    void importQuestionsPdf_cropsFigureOfEachQuestion() throws Exception {
+        // Trang A4 (595 x 842 diem) co 1 anh 200 x 150 diem, mep tren cach 100, mep trai cach 100
+        // -> thang 0 - 1000 cua trang: [ymin 119, xmin 168, ymax 297, xmax 504]
+        byte[] pdf = pdfWithImage(100, 100, 200, 150);
+        Map<String, Object> withFigure = question("Tính góc x.", "APPLY", "x = 55°", "kề bù");
+        withFigure.put("figurePage", 1);
+        // Khung AI uoc luong lech vai phan tram: van phai cat dung theo anh that
+        withFigure.put("figureBox", List.of(130, 180, 310, 520));
+        Map<String, Object> noFigure = question("Phát biểu dấu hiệu chia hết cho 2.", "REMEMBER", "Tận cùng chẵn");
+        noFigure.put("figurePage", 0);
+        noFigure.put("figureBox", List.of());
+        Map<String, Object> wrongPage = question("Tính góc y.", "APPLY", "y = 60°");
+        wrongPage.put("figurePage", 9);
+        llm.willReturn(questionsJson("Toán 6", "Góc", withFigure, noFigure, wrongPage));
+
+        JsonNode data = data(uploadQuestions(LECTURER_2, "goc.pdf", "application/pdf", pdf, null)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.questions[0].hasFigure").value(true))
+                .andExpect(jsonPath("$.data.questions[1].hasFigure").value(false))
+                .andExpect(jsonPath("$.data.questions[2].hasFigure").value(false)));
+        String figureQuestionId = data.get("questions").get(0).get("id").asText();
+        String plainQuestionId = data.get("questions").get(1).get("id").asText();
+
+        JsonNode figure = data(mockMvc.perform(auth(get(CONTENT + "/questions/" + figureQuestionId + "/figure"), LECTURER_2))
+                .andExpect(status().isOk()));
+        assertThat(figure.get("dataUrl").asText()).startsWith("data:image/png;base64,");
+        // Anh rong 200/595 trang (+ le 2 x 0,6%), ve o 160 DPI: khoang 460 diem anh
+        assertThat(figure.get("width").asInt()).isBetween(420, 500);
+        assertThat(figure.get("height").asInt()).isBetween(320, 380);
+
+        // Danh sach cau hoi cung bao cau nao co hinh
+        mockMvc.perform(auth(get(CONTENT + "/questions").param("topicId", data.get("topic").get("id").asText()), LECTURER_2))
+                .andExpect(jsonPath("$.data[0].hasFigure").value(true))
+                .andExpect(jsonPath("$.data[1].hasFigure").value(false));
+
+        expectError(mockMvc.perform(auth(get(CONTENT + "/questions/" + plainQuestionId + "/figure"), LECTURER_2)),
+                404, "QUESTION_FIGURE_NOT_FOUND");
+        // Giang vien khac khong xem duoc
+        expectError(mockMvc.perform(auth(get(CONTENT + "/questions/" + figureQuestionId + "/figure"), LECTURER_1)),
+                404, "QUESTION_NOT_FOUND");
+    }
+
+    private byte[] pdfWithImage(float left, float top, float width, float height) throws Exception {
+        try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
+            var page = new org.apache.pdfbox.pdmodel.PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
+            document.addPage(page);
+            var picture = new java.awt.image.BufferedImage(400, 300, java.awt.image.BufferedImage.TYPE_INT_RGB);
+            var graphics = picture.createGraphics();
+            graphics.setColor(java.awt.Color.WHITE);
+            graphics.fillRect(0, 0, 400, 300);
+            graphics.setColor(java.awt.Color.RED);
+            graphics.drawLine(0, 299, 399, 0);
+            graphics.dispose();
+            var image = org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory.createFromImage(document, picture);
+            try (var stream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                float pageHeight = page.getMediaBox().getHeight();
+                stream.drawImage(image, left, pageHeight - top - height, width, height);
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.save(out);
+            return out.toByteArray();
+        }
+    }
+
+    @Test
     void import_rejectsBadFilesAndAiProblemsWithoutSavingAnything() throws Exception {
         int lessonsBefore = lessonCount(ADMIN);
         int rubricsBefore = idsOf(ADMIN, "/rubrics").size();

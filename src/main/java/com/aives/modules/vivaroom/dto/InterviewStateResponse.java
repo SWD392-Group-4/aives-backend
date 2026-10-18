@@ -29,6 +29,11 @@ public class InterviewStateResponse {
     // true = lan quyet dinh gan nhat AI bi loi (het quota, mat mang...) nen he thong tu chuyen cau tiep theo
     private boolean aiFallback;
 
+    // false = backend chua co GOOGLE_SPEECH_CREDENTIALS: FE tu nhan dang giong noi / tu doc cau hoi (hoac go chu)
+    private boolean sttEnabled;
+
+    private boolean ttsEnabled;
+
     private Integer totalQuestions;
 
     /* ----- Chi co khi status = QUESTION ----- */
@@ -40,6 +45,9 @@ public class InterviewStateResponse {
     private String type;
 
     private String questionText;
+
+    // Hinh ve cua cau hoi goc (data:image/png;base64,...), null = cau hoi khong co hinh
+    private String questionImage;
 
     // Cau hoi goc thu may (bat dau tu 1)
     private Integer questionNo;
