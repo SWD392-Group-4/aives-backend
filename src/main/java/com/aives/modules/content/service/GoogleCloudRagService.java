@@ -566,6 +566,7 @@ public class GoogleCloudRagService {
 
     @Transactional
     public List<QuestionResponse> generateQuestionsFromRag(UserPrincipal actor, GenerateQuestionsFromRagRequest request) {
+        request.resolveBloomCounts();
         Topic topic = topicRepository.findById(request.getTopicId().trim()).orElseThrow(
                 () -> new BusinessException(ErrorCode.TOPIC_NOT_FOUND));
 
@@ -602,7 +603,8 @@ public class GoogleCloudRagService {
                 if (content.isBlank()) {
                     continue;
                 }
-                String bloomLevel = normalizeBloomLevel(qNode.path("bloomLevel").asText("UNDERSTAND"));
+                String defaultBloom = (request.getRememberCount() != null && request.getRememberCount().equals(request.getCount())) ? "REMEMBER" : "UNDERSTAND";
+                String bloomLevel = normalizeBloomLevel(qNode.path("bloomLevel").asText(defaultBloom));
                 String modelAnswer = qNode.path("modelAnswer").asText("").trim();
 
                 List<String> keywords = new ArrayList<>();
@@ -642,11 +644,14 @@ public class GoogleCloudRagService {
             List<Material> materials,
             GenerateQuestionsFromRagRequest request) {
 
+        request.resolveBloomCounts();
         int totalCount = request.getCount() != null ? request.getCount() : 5;
         int remCount = request.getRememberCount() != null ? request.getRememberCount() : 1;
         int undCount = request.getUnderstandCount() != null ? request.getUnderstandCount() : 2;
         int appCount = request.getApplyCount() != null ? request.getApplyCount() : 1;
         int anaCount = request.getAnalyzeCount() != null ? request.getAnalyzeCount() : 1;
+
+        boolean is100Remember = (remCount == totalCount && totalCount > 0);
 
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append("Bạn là chuyên gia học thuật và giám khảo thi vấn đáp đại học.\n");
@@ -667,7 +672,7 @@ public class GoogleCloudRagService {
         }
         promptBuilder.append("\n");
 
-        promptBuilder.append("Cấu trúc số lượng câu hỏi cần sinh:\n");
+        promptBuilder.append("Cấu trúc số lượng câu hỏi cần sinh (Tuân thủ nghiêm ngặt BR-BANK-004):\n");
         promptBuilder.append("- Tổng số câu hỏi: ").append(totalCount).append("\n");
         promptBuilder.append("- Mức REMEMBER (Nhớ, nêu định nghĩa): ").append(remCount).append("\n");
         promptBuilder.append("- Mức UNDERSTAND (Hiểu, giải thích nguyên lý): ").append(undCount).append("\n");
@@ -678,41 +683,83 @@ public class GoogleCloudRagService {
         promptBuilder.append("1. Câu hỏi và đáp án phải bám sát (grounded) 100% vào ngữ liệu của slide tài liệu.\n");
         promptBuilder.append("2. Mỗi câu hỏi phải có đáp án mẫu chuẩn mực học thuật, đủ ý để chấm thi vấn đáp.\n");
         promptBuilder.append("3. expectedKeywords: 3 - 6 từ khoá then chốt bắt buộc có trong câu trả lời của thí sinh.\n");
-        promptBuilder.append("4. Tạo 01 Rubric đánh giá chung với 3 đến 4 tiêu chí. Tổng trọng số (weightPercent) của các tiêu chí PHẢI BẰNG ĐÚNG 100%.\n");
-        promptBuilder.append("5. Chỉ trả về DUY NHẤT một chuỗi JSON hợp lệ, không chứa văn bản ngoài JSON, theo schema sau:\n");
-        promptBuilder.append("""
-        {
-          "rubric": {
-            "name": "Tiêu chí chấm thi vấn đáp - %s",
-            "description": "Thang đo đánh giá chất lượng câu trả lời thi vấn đáp",
-            "criteria": [
-              {
-                "name": "Nắm vững lý thuyết trọng tâm",
-                "description": "Trình bày chính xác định nghĩa, cơ chế và thuật ngữ theo tài liệu",
-                "weightPercent": 40.0
-              },
-              {
-                "name": "Khả năng phân tích và giải thích logic",
-                "description": "Lập luận chặt chẽ, diễn đạt rõ ràng mạch lạc",
-                "weightPercent": 30.0
-              },
-              {
-                "name": "Vận dụng thực tế và ví dụ minh hoạ",
-                "description": "Liên hệ tốt với tình huống thực tiễn và giải quyết vấn đề",
-                "weightPercent": 30.0
-              }
-            ]
-          },
-          "questions": [
-            {
-              "content": "Nội dung câu hỏi...",
-              "bloomLevel": "UNDERSTAND",
-              "modelAnswer": "Nội dung đáp án chuẩn...",
-              "expectedKeywords": ["từ khoá 1", "từ khoá 2", "từ khoá 3"]
-            }
-          ]
+        if (is100Remember) {
+            promptBuilder.append("4. Vì 100% câu hỏi thuộc mức REMEMBER, Rubric PHẢI tập trung vào tiêu chí kiểm tra ghi nhớ: (1) Độ chính xác định nghĩa & Thuật ngữ cốt lõi (50.0%), (2) Khả năng tái hiện cấu trúc kiến thức bài giảng (30.0%), (3) Trình bày rõ ràng, chuẩn mực (20.0%). Tổng trọng số PHẢI BẰNG ĐÚNG 100%.\n");
+        } else {
+            promptBuilder.append("4. Tạo 01 Rubric đánh giá chung với 3 đến 4 tiêu chí phản ánh đúng độ sâu của các mức Bloom được yêu cầu. Tổng trọng số (weightPercent) PHẢI BẰNG ĐÚNG 100%.\n");
         }
-        """.formatted(topic.getName()));
+        promptBuilder.append("5. Chỉ trả về DUY NHẤT một chuỗi JSON hợp lệ, không chứa văn bản ngoài JSON, theo schema sau:\n");
+
+        if (is100Remember) {
+            promptBuilder.append("""
+            {
+              "rubric": {
+                "name": "Tiêu chí chấm thi vấn đáp (Mức Nhớ) - %s",
+                "description": "Thang đo đánh giá chất lượng câu trả lời thi vấn đáp tập trung vào mức ghi nhớ lý thuyết và thuật ngữ",
+                "criteria": [
+                  {
+                    "name": "Độ chính xác định nghĩa & Thuật ngữ cốt lõi",
+                    "description": "Trình bày chuẩn xác định nghĩa, từ khoá và khái niệm then chốt có trong tài liệu",
+                    "weightPercent": 50.0
+                  },
+                  {
+                    "name": "Khả năng tái hiện cấu trúc kiến thức bài giảng",
+                    "description": "Nêu đúng và đầy đủ các thành phần, nguyên lý cơ bản",
+                    "weightPercent": 30.0
+                  },
+                  {
+                    "name": "Tác phong trả lời rõ ràng, chuẩn mực",
+                    "description": "Diễn đạt mạch lạc, tự tin và đúng trọng tâm câu hỏi",
+                    "weightPercent": 20.0
+                  }
+                ]
+              },
+              "questions": [
+                {
+                  "content": "Nội dung câu hỏi mức REMEMBER...",
+                  "bloomLevel": "REMEMBER",
+                  "modelAnswer": "Nội dung đáp án chuẩn...",
+                  "expectedKeywords": ["từ khoá 1", "từ khoá 2", "từ khoá 3"]
+                }
+              ]
+            }
+            """.formatted(topic.getName()));
+        } else {
+            promptBuilder.append("""
+            {
+              "rubric": {
+                "name": "Tiêu chí chấm thi vấn đáp - %s",
+                "description": "Thang đo đánh giá chất lượng câu trả lời thi vấn đáp",
+                "criteria": [
+                  {
+                    "name": "Nắm vững lý thuyết trọng tâm",
+                    "description": "Trình bày chính xác định nghĩa, cơ chế và thuật ngữ theo tài liệu",
+                    "weightPercent": 40.0
+                  },
+                  {
+                    "name": "Khả năng phân tích và giải thích logic",
+                    "description": "Lập luận chặt chẽ, diễn đạt rõ ràng mạch lạc",
+                    "weightPercent": 30.0
+                  },
+                  {
+                    "name": "Vận dụng thực tế và ví dụ minh hoạ",
+                    "description": "Liên hệ tốt với tình huống thực tiễn và giải quyết vấn đề",
+                    "weightPercent": 30.0
+                  }
+                ]
+              },
+              "questions": [
+                {
+                  "content": "Nội dung câu hỏi...",
+                  "bloomLevel": "UNDERSTAND",
+                  "modelAnswer": "Nội dung đáp án chuẩn...",
+                  "expectedKeywords": ["từ khoá 1", "từ khoá 2", "từ khoá 3"]
+                }
+              ]
+            }
+            """.formatted(topic.getName()));
+        }
+
 
         String prompt = promptBuilder.toString();
 

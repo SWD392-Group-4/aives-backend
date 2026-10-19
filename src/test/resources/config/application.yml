@@ -1,5 +1,14 @@
 # Chi ap dung khi chay test (duoc nap them ben canh src/main/resources/application.yml).
 app:
+  jwt:
+    secret: ${JWT_SECRET:c2VjdXJpdHkta2V5LWZvci1haXZlcy1hcHBsaWNhdGlvbi1zZWNyZXQta2V5LTEyMw==}
+  seed:
+    admin:
+      email: ${ADMIN_EMAIL:admin@aives.local}
+      password: ${ADMIN_PASSWORD:Admin@123}
+      full-name: System Admin
+    default-password: ${SEED_DEFAULT_PASSWORD:123456}
   grading:
     # Test tu goi cham diem khi can, khong de bo cham ngam chay song song lam ket qua thay doi bat ngo
     auto-enabled: false
+
