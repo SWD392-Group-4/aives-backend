@@ -51,12 +51,20 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/content")
 @PreAuthorize("hasAnyRole('LECTURER', 'ADMIN')")
-@RequiredArgsConstructor
 public class ContentController {
 
     private final ContentService contentService;
     private final ContentImportService contentImportService;
     private final GoogleCloudRagService ragService;
+
+    public ContentController(
+            ContentService contentService,
+            ContentImportService contentImportService,
+            GoogleCloudRagService ragService) {
+        this.contentService = contentService;
+        this.contentImportService = contentImportService;
+        this.ragService = ragService;
+    }
 
     @Operation(summary = "Danh sách bài học")
     @GetMapping("/lessons")
