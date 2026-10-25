@@ -1,4 +1,4 @@
-﻿package com.aives.modules.content.repository;
+package com.aives.modules.content.repository;
 
 import com.aives.modules.content.entity.Question;
 import java.util.Collection;
@@ -85,5 +85,3 @@ public interface QuestionRepository extends JpaRepository<Question, String>, Jpa
     long countByTopic_Lesson_Id(String lessonId);
 }
 
-    int countByChapter_Id(String chapterId);
-}

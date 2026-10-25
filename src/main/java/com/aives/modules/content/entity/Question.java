@@ -1,15 +1,9 @@
 package com.aives.modules.content.entity;
 
 import com.aives.common.entity.BaseEntity;
-import com.aives.modules.auth.entity.User;
-import com.aives.modules.content.enums.QuestionDifficulty;
-import com.aives.modules.content.enums.QuestionSource;
-import com.aives.modules.content.enums.QuestionStatus;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -68,14 +62,12 @@ public class Question extends BaseEntity {
     private String expectedKeywords;
 
     @Builder.Default
-    @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 20)
-    private QuestionSource source = QuestionSource.MANUAL;
+    private String source = "MANUAL";
 
     @Builder.Default
-    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private QuestionStatus status = QuestionStatus.DRAFT;
+    private String status = "DRAFT";
 
     @Column(name = "question_audio_key", length = 500)
     private String questionAudioKey;

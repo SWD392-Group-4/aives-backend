@@ -1,4 +1,4 @@
-﻿package com.aives.modules.content.service;
+package com.aives.modules.content.service;
 
 import com.aives.modules.content.document.AcademicAuditLog;
 import com.aives.modules.content.dto.AcademicAuditLogResponse;

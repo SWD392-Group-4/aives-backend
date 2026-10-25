@@ -1,4 +1,4 @@
-﻿package com.aives.modules.content.dto;
+package com.aives.modules.content.dto;
 
 import com.aives.modules.content.enums.QuestionDifficulty;
 import com.aives.modules.content.enums.QuestionStatus;

@@ -1,4 +1,4 @@
-﻿package com.aives.modules.content.service;
+package com.aives.modules.content.service;
 
 import com.aives.modules.content.dto.CreateQuestionRequest;
 import com.aives.modules.content.dto.QuestionFilter;

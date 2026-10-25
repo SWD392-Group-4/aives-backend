@@ -1,9 +1,6 @@
-﻿package com.aives.modules.content.dto;
+package com.aives.modules.content.dto;
 
-import com.aives.modules.content.enums.QuestionDifficulty;
-import com.aives.modules.content.enums.QuestionSource;
-import com.aives.modules.content.enums.QuestionStatus;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +14,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class QuestionResponse {
-
     private String id;
     private String chapterId;
     private String courseId;

@@ -1,7 +1,6 @@
-﻿package com.aives.modules.content.dto;
+package com.aives.modules.content.dto;
 
-import com.aives.modules.content.enums.MaterialRagStatus;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,7 +13,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class MaterialResponse {
-
     private String id;
     private String chapterId;
     private String lecturerId;
@@ -23,7 +21,8 @@ public class MaterialResponse {
     private String topicId;
     private String topicName;
     private String title;
-    private String fileUrl;
+    private String fileName;
+    private Long fileSize;
     private String fileType;
     private String gcsUri;
     private String fileUrl;

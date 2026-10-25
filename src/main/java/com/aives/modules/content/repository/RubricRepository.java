@@ -1,4 +1,4 @@
-﻿package com.aives.modules.content.repository;
+package com.aives.modules.content.repository;
 
 import com.aives.modules.content.entity.Rubric;
 import java.util.List;
@@ -13,5 +13,5 @@ public interface RubricRepository extends JpaRepository<Rubric, String> {
 
     List<Rubric> findByCreatedByOrderByCreatedAtDescIdDesc(String createdBy);
 
-    boolean existsByCourse_Id(String courseId);
+    List<Rubric> findAllByOrderByCreatedAtDescIdDesc();
 }
