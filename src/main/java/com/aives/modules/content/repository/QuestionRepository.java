@@ -62,9 +62,17 @@ public interface QuestionRepository extends JpaRepository<Question, String>, Jpa
 
     List<Question> findByChapter_IdAndStatus(String chapterId, String status);
 
+    List<Question> findByChapter_Course_IdAndStatus(String courseId, String status);
+
+    List<Question> findByChapter_IdInAndStatus(Collection<String> chapterIds, String status);
+
     long countByChapter_Id(String chapterId);
 
     long countByChapter_IdAndStatus(String chapterId, String status);
+
+    long countByChapter_Course_IdAndStatus(String courseId, String status);
+
+    long countByChapter_IdInAndStatus(Collection<String> chapterIds, String status);
 
     boolean existsByRubric_Id(String rubricId);
 

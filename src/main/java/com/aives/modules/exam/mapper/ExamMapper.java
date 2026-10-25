@@ -36,15 +36,37 @@ public class ExamMapper {
     /** topicNames: ten cac chu de theo id (chu de da bi xoa thi khong co trong map va bi bo qua). */
     public ExamSessionResponse toResponse(VivaExam exam, String ownerName, long attemptCount,
                                           Map<String, String> topicNames, LocalDateTime now) {
+        return toResponse(exam, ownerName, attemptCount, topicNames, null, null, now);
+    }
+
+    public ExamSessionResponse toResponse(VivaExam exam, String ownerName, long attemptCount,
+                                          Map<String, String> topicNames, String courseName,
+                                          List<com.aives.modules.exam.entity.VivaExamQuestion> examQuestions,
+                                          LocalDateTime now) {
         ExamSessionStatus status = statusOf(exam, now);
         List<ExamSessionResponse.TopicItem> topics = new ArrayList<>();
-        for (String topicId : exam.getTopicIds()) {
-            String name = topicNames.get(topicId);
-            if (name != null) {
-                topics.add(new ExamSessionResponse.TopicItem(topicId, name));
+        if (exam.getTopicIds() != null) {
+            for (String topicId : exam.getTopicIds()) {
+                String name = topicNames != null ? topicNames.get(topicId) : null;
+                if (name != null) {
+                    topics.add(new ExamSessionResponse.TopicItem(topicId, name));
+                }
             }
+            topics.sort(Comparator.comparing(ExamSessionResponse.TopicItem::getName));
         }
-        topics.sort(Comparator.comparing(ExamSessionResponse.TopicItem::getName));
+
+        List<ExamSessionResponse.QuestionItem> questionItems = null;
+        if (examQuestions != null && !examQuestions.isEmpty()) {
+            questionItems = examQuestions.stream()
+                    .map(eq -> ExamSessionResponse.QuestionItem.builder()
+                            .id(eq.getQuestion().getId())
+                            .content(eq.getQuestion().getContent())
+                            .difficulty(eq.getQuestion().getDifficulty())
+                            .orderNo(eq.getOrderNo())
+                            .build())
+                    .toList();
+        }
+
         return ExamSessionResponse.builder()
                 .id(exam.getId())
                 .passcode(exam.getPasscode())
@@ -56,6 +78,9 @@ public class ExamMapper {
                 .maxAttempts(exam.getMaxAttempts())
                 .allowMobileExam(Boolean.TRUE.equals(exam.getAllowMobileExam()))
                 .status(status)
+                .courseId(exam.getCourseId())
+                .courseName(courseName)
+                .questions(questionItems)
                 .questionCount(exam.getQuestionCount())
                 .topics(topics)
                 .ownerId(exam.getLecturerId())

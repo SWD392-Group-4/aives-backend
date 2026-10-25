@@ -34,6 +34,10 @@ public class ExamSessionResponse {
     private boolean allowMobileExam;
     private ExamSessionStatus status;
 
+    private String courseId;
+    private String courseName;
+    private List<QuestionItem> questions;
+
     // So cau hoi goc cua phien. null = so mac dinh cua he thong
     private Integer questionCount;
     // Chu de lay cau hoi. Rong = phien tao truoc khi co chuc nang chon chu de
@@ -55,8 +59,21 @@ public class ExamSessionResponse {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @Builder
     public static class TopicItem {
         private String id;
         private String name;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class QuestionItem {
+        private String id;
+        private String content;
+        private String difficulty;
+        private Integer orderNo;
     }
 }
