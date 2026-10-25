@@ -22,6 +22,12 @@ public interface MaterialRepository extends JpaRepository<Material, String> {
 
     List<Material> findByTopicId(String topicId);
 
+    List<Material> findByChapterIdOrderByCreatedAtDesc(String chapterId);
+
+    List<Material> findByChapterId(String chapterId);
+
+    long countByChapterId(String chapterId);
+
     @Query("SELECT m FROM Material m WHERE "
             + "(:lecturerId IS NULL OR m.lecturerId = :lecturerId) AND "
             + "(:lessonId IS NULL OR m.lessonId = :lessonId) AND "

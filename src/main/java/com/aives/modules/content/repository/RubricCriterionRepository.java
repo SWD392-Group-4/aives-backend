@@ -12,4 +12,6 @@ public interface RubricCriterionRepository extends JpaRepository<RubricCriterion
     List<RubricCriterion> findByRubric_IdOrderByOrderNoAsc(String rubricId);
 
     List<RubricCriterion> findByRubric_IdInOrderByOrderNoAsc(Collection<String> rubricIds);
+
+    void deleteByRubric_Id(String rubricId);
 }

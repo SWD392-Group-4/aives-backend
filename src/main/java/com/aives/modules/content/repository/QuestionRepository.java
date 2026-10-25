@@ -4,14 +4,16 @@ import com.aives.modules.content.entity.Question;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface QuestionRepository extends JpaRepository<Question, String> {
+public interface QuestionRepository extends JpaRepository<Question, String>, JpaSpecificationExecutor<Question> {
 
     // Cac cau hoi theo trang thai, cu nhat truoc. Pageable dung de gioi han so cau lay ra.
     List<Question> findByStatusOrderByCreatedAtAscIdAsc(String status, Pageable pageable);
@@ -55,6 +57,8 @@ public interface QuestionRepository extends JpaRepository<Question, String> {
     List<Question> findByTopic_Lesson_TitleAndStatus(String lessonTitle, String status);
 
     List<Question> findByChapter_Id(String chapterId);
+
+    Page<Question> findByChapter_Id(String chapterId, Pageable pageable);
 
     List<Question> findByChapter_IdAndStatus(String chapterId, String status);
 

@@ -31,6 +31,9 @@ public enum ErrorCode {
     GRADE_NOTE_REQUIRED(HttpStatus.BAD_REQUEST, "Điểm chốt lệch quá 2 điểm so với điểm AI gợi ý nên bắt buộc nhập ghi chú giải trình (ít nhất 5 ký tự)"),
     MOBILE_EXAM_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "Ca thi này không cho phép làm bài trên thiết bị di động. Vui lòng sử dụng máy tính."),
     RUBRIC_WEIGHT_INVALID(HttpStatus.BAD_REQUEST, "Tổng trọng số các tiêu chí trong Rubric phải bằng đúng 100%"),
+    RUBRIC_LOCKED(HttpStatus.FORBIDDEN, "Rubric của môn học đã bị khóa do đã có ca thi đang mở hoặc đã kết thúc"),
+    COURSE_RUBRIC_REQUIRED(HttpStatus.BAD_REQUEST, "Môn học bắt buộc phải có Rubric hoàn chỉnh 100% trước khi duyệt câu hỏi"),
+    DIFFICULTY_RATIO_INVALID(HttpStatus.BAD_REQUEST, "Tổng tỷ lệ phần trăm độ khó (Dễ + Trung bình + Khó) phải bằng đúng 100%"),
     OTP_INVALID(HttpStatus.BAD_REQUEST, "Mã xác thực OTP không đúng"),
     OTP_EXPIRED(HttpStatus.BAD_REQUEST, "Mã xác thực OTP đã hết hạn, vui lòng gửi lại mã mới"),
     OTP_NOT_FOUND(HttpStatus.BAD_REQUEST, "Không tìm thấy yêu cầu xác thực OTP cho email này"),
@@ -45,6 +48,8 @@ public enum ErrorCode {
     // 404 / 409
     NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy tài nguyên"),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng"),
+    COURSE_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy môn học"),
+    CHAPTER_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy chương"),
     LESSON_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy bài học"),
     TOPIC_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy chủ đề"),
     MATERIAL_NOT_FOUND(HttpStatus.NOT_FOUND, "Không tìm thấy học liệu / slide"),

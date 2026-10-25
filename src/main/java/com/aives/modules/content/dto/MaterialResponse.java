@@ -14,6 +14,7 @@ import lombok.Setter;
 @Builder
 public class MaterialResponse {
     private String id;
+    private String chapterId;
     private String lecturerId;
     private String lessonId;
     private String lessonTitle;
@@ -24,6 +25,7 @@ public class MaterialResponse {
     private Long fileSize;
     private String fileType;
     private String gcsUri;
+    private String fileUrl;
     private String ragCorpusId;
     private String ragStatus;
     private Integer chunkCount;

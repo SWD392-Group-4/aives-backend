@@ -69,19 +69,37 @@ public class ContentMapper {
     }
 
     public QuestionResponse toQuestionResponse(Question question, boolean hasFigure) {
+        if (question == null) {
+            return null;
+        }
+        String chapterId = question.getChapter() != null ? question.getChapter().getId() : null;
+        String courseId = question.getChapter() != null && question.getChapter().getCourse() != null
+                ? question.getChapter().getCourse().getId()
+                : null;
+        String topicId = question.getTopic() != null ? question.getTopic().getId() : null;
+        String topicName = question.getTopic() != null ? question.getTopic().getName() : null;
+        String lessonTitle = question.getTopic() != null && question.getTopic().getLesson() != null
+                ? question.getTopic().getLesson().getTitle()
+                : null;
+
         return QuestionResponse.builder()
                 .id(question.getId())
-                .topicId(question.getTopic().getId())
-                .topicName(question.getTopic().getName())
-                .lessonTitle(question.getTopic().getLesson().getTitle())
+                .chapterId(chapterId)
+                .courseId(courseId)
+                .topicId(topicId)
+                .topicName(topicName)
+                .lessonTitle(lessonTitle)
                 .rubricId(question.getRubric() == null ? null : question.getRubric().getId())
                 .rubricName(question.getRubric() == null ? null : question.getRubric().getName())
                 .content(question.getContent())
+                .difficulty(question.getDifficulty())
                 .bloomLevel(question.getBloomLevel())
                 .modelAnswer(question.getModelAnswer())
                 .expectedKeywords(parseKeywords(question.getExpectedKeywords()))
                 .source(question.getSource())
                 .status(question.getStatus())
+                .createdBy(question.getCreatedBy())
+                .creatorName(question.getCreatedBy())
                 .hasFigure(hasFigure)
                 .createdAt(toInstant(question.getCreatedAt()))
                 .updatedAt(toInstant(question.getUpdatedAt()))

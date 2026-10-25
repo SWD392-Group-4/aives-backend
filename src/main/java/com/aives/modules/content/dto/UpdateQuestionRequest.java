@@ -27,8 +27,10 @@ public class UpdateQuestionRequest {
     @NotBlank(message = "Nội dung câu hỏi không được để trống")
     private String content;
 
+    @Schema(example = "MEDIUM", description = "Độ khó: EASY, MEDIUM, HARD")
+    private String difficulty;
+
     @Schema(example = "UNDERSTAND", description = "Cấp độ tư duy Bloom: REMEMBER, UNDERSTAND, APPLY, ANALYZE")
-    @NotBlank(message = "Cấp độ Bloom không được để trống")
     private String bloomLevel;
 
     @Schema(example = "Agile tập trung vào tương tác cá nhân, phần mềm chạy được, cộng tác khách hàng và phản hồi thay đổi.", description = "Câu trả lời mẫu")
