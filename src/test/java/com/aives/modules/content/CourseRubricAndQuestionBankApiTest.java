@@ -102,6 +102,16 @@ class CourseRubricAndQuestionBankApiTest extends ApiTestSupport {
     }
 
     @Test
+    void getAllCourses_returnsListSuccessfully() throws Exception {
+        mockMvc.perform(get("/api/v1/courses")
+                        .header("Authorization", "Bearer " + lecturerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data[0].id").exists())
+                .andExpect(jsonPath("$.data[0].courseCode").exists());
+    }
+
+    @Test
     void rubricLifecycle_sumMustBe100_andApproveGate() throws Exception {
         // 1. Thử cập nhật Rubric với tổng trọng số khác 100% -> phải ném lỗi 400 (BR-BANK-001)
         UpdateCourseRubricRequest invalidRubric = UpdateCourseRubricRequest.builder()
