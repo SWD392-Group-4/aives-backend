@@ -1,8 +1,8 @@
-package com.aives.modules.content.dto;
+﻿package com.aives.modules.content.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.aives.modules.content.enums.QuestionDifficulty;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,26 +17,13 @@ import lombok.Setter;
 @Builder
 public class UpdateQuestionRequest {
 
-    @Schema(example = "TP0123456789", description = "Id chủ đề chứa câu hỏi (bỏ trống nếu không đổi)")
-    private String topicId;
-
-    @Schema(example = "RB0123456789", description = "Id rubric chấm điểm (truyền chuỗi rỗng để gỡ rubric)")
-    private String rubricId;
-
-    @Schema(example = "Trình bày các đặc điểm cốt lõi của phương pháp Agile?", description = "Nội dung câu hỏi")
     @NotBlank(message = "Nội dung câu hỏi không được để trống")
     private String content;
 
-    @Schema(example = "UNDERSTAND", description = "Cấp độ tư duy Bloom: REMEMBER, UNDERSTAND, APPLY, ANALYZE")
-    @NotBlank(message = "Cấp độ Bloom không được để trống")
-    private String bloomLevel;
+    @NotNull(message = "Mức độ khó không được để trống")
+    private QuestionDifficulty difficulty;
 
-    @Schema(example = "Agile tập trung vào tương tác cá nhân, phần mềm chạy được, cộng tác khách hàng và phản hồi thay đổi.", description = "Câu trả lời mẫu")
     private String modelAnswer;
 
-    @Schema(example = "[\"tương tác cá nhân\", \"phần mềm chạy tốt\", \"thích ứng thay đổi\"]", description = "Từ khóa dự kiến")
     private List<String> expectedKeywords;
-
-    @Schema(example = "APPROVED", description = "Trạng thái câu hỏi: DRAFT, APPROVED, REJECTED, ARCHIVED")
-    private String status;
 }
