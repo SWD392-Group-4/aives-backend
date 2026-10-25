@@ -28,6 +28,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String AUTH_PATH_PREFIX = "/api/auth/";
+    private static final String AUTH_V1_PATH_PREFIX = "/api/v1/auth/";
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
@@ -45,13 +46,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 Claims claims = jwtTokenProvider.parseClaims(token);
+                // Refresh tokens khong duoc dung nhu access token de truy cap API
+                if (jwtTokenProvider.isRefreshToken(claims)) {
+                    SecurityContextHolder.clearContext();
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 if (!tokenBlacklist.isBlacklisted(claims.getId())) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(claims.getSubject());
-                    // Dang dung mat khau tam: chi cho goi /api/auth/** (xem profile, doi mat khau, dang xuat)
+                    // Dang dung mat khau tam: chi cho goi /api/auth/** hoac /api/v1/auth/** (xem profile, doi mat khau, dang xuat)
+                    String uri = request.getRequestURI();
+                    String contextPath = request.getContextPath();
+                    boolean isAuthEndpoint = uri.startsWith(contextPath + AUTH_PATH_PREFIX)
+                            || uri.startsWith(contextPath + AUTH_V1_PATH_PREFIX);
+
                     if (userDetails.isEnabled()
                             && userDetails instanceof UserPrincipal principal
                             && principal.isMustChangePassword()
-                            && !request.getRequestURI().startsWith(request.getContextPath() + AUTH_PATH_PREFIX)) {
+                            && !isAuthEndpoint) {
                         writeError(response, ErrorCode.PASSWORD_CHANGE_REQUIRED);
                         return;
                     }

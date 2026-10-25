@@ -7,9 +7,11 @@ import com.aives.modules.auth.dto.ForgotPasswordRequest;
 import com.aives.modules.auth.dto.GoogleLoginRequest;
 import com.aives.modules.auth.dto.LoginRequest;
 import com.aives.modules.auth.dto.LoginResponse;
+import com.aives.modules.auth.dto.RefreshTokenRequest;
 import com.aives.modules.auth.dto.RegisterRequest;
 import com.aives.modules.auth.dto.ResetPasswordRequest;
 import com.aives.modules.auth.dto.SendOtpRequest;
+import com.aives.modules.auth.dto.TokenRefreshResponse;
 import com.aives.modules.auth.dto.UpdateProfileRequest;
 import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.service.AuthService;
@@ -33,9 +35,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Auth", description = "Đăng ký / đăng nhập / đăng xuất / profile (mọi role)")
+@Tag(name = "Auth", description = "Đăng ký / đăng nhập / làm mới token / đăng xuất / profile (mọi role)")
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping({"/api/v1/auth", "/api/auth"})
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -75,11 +77,18 @@ public class AuthController {
         return ApiResponse.ok("Đăng ký thành công", authService.register(request));
     }
 
-    @Operation(summary = "Đăng nhập, trả về accessToken (JWT)")
+    @Operation(summary = "Đăng nhập, trả về accessToken (JWT) và refreshToken")
     @SecurityRequirements // API nay khong can token
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.ok("Đăng nhập thành công", authService.login(request));
+    }
+
+    @Operation(summary = "Làm mới access token bằng refresh token")
+    @SecurityRequirements // API nay khong can token
+    @PostMapping("/refresh")
+    public ApiResponse<TokenRefreshResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ApiResponse.ok("Làm mới token thành công", authService.refreshToken(request));
     }
 
     @Operation(summary = "Đăng nhập bằng tài khoản Google")
@@ -93,8 +102,9 @@ public class AuthController {
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @Parameter(hidden = true)
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
-        authService.logout(authorizationHeader);
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @RequestBody(required = false) RefreshTokenRequest request) {
+        authService.logout(authorizationHeader, request);
         return ApiResponse.ok("Đăng xuất thành công", null);
     }
 

@@ -14,8 +14,12 @@ import lombok.Setter;
 public class LoginResponse {
 
     private String accessToken;
-    private String tokenType;
-    // Thoi gian song cua token, tinh bang giay
+    private String refreshToken;
+    @Builder.Default
+    private String tokenType = "Bearer";
+    // Thoi gian song cua access token, tinh bang giay
     private long expiresIn;
+    // Thoi gian song cua refresh token, tinh bang giay
+    private long refreshExpiresIn;
     private UserResponse user;
 }

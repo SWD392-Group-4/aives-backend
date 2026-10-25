@@ -26,11 +26,19 @@ public class SecurityConfig {
     // API khong can dang nhap
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/auth/login",
+            "/api/v1/auth/login",
+            "/api/auth/refresh",
+            "/api/v1/auth/refresh",
             "/api/auth/google",
+            "/api/v1/auth/google",
             "/api/auth/register",
+            "/api/v1/auth/register",
             "/api/auth/send-otp",
+            "/api/v1/auth/send-otp",
             "/api/auth/forgot-password",
+            "/api/v1/auth/forgot-password",
             "/api/auth/reset-password",
+            "/api/v1/auth/reset-password",
             "/api/health/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
@@ -53,7 +61,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**", "/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

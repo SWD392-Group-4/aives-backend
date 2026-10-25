@@ -40,6 +40,7 @@ public enum ErrorCode {
 
     // 401 / 403
     UNAUTHENTICATED(HttpStatus.UNAUTHORIZED, "Chưa đăng nhập hoặc token không hợp lệ"),
+    AUTH_INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "Phiên đăng nhập đã hết hạn hoặc token không hợp lệ"),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Email hoặc mật khẩu không đúng"),
     ACCOUNT_DISABLED(HttpStatus.FORBIDDEN, "Tài khoản đã bị khoá"),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "Không có quyền truy cập"),
