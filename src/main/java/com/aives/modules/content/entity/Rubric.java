@@ -43,6 +43,14 @@ public class Rubric extends BaseEntity {
     @Column(name = "created_by", nullable = false, length = 20)
     private String createdBy;
 
+    @jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "courses_id", referencedColumnName = "courses_id")
+    private Course course;
+
+    @Builder.Default
+    @Column(name = "is_locked", nullable = false)
+    private Boolean isLocked = false;
+
     @Nationalized
     @Column(name = "name", nullable = false, length = 200)
     private String name;

@@ -1,9 +1,9 @@
 -- =====================================================================
--- Migration 01: Course Rubric, Chapters, Shared Question Bank, RAG Materials
--- Conforms to FLOW-02-QUESTION-BANK, BR-BANK-001 -> BR-BANK-007
+-- FLOW-02-QUESTION-BANK: Migration Script (TASK-011)
+-- Course Hierarchy, Shared Questions, and Audit Log Setup
 -- =====================================================================
 
--- 1. Tao bang courses
+-- 1. BẢNG MÔN HỌC (COURSES)
 CREATE TABLE IF NOT EXISTS courses (
     courses_id  VARCHAR(20)  NOT NULL,
     course_code VARCHAR(50)  NOT NULL,
@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS courses (
     CONSTRAINT uq_courses_code UNIQUE (course_code)
 );
 
--- 2. Tao bang course_lecturers (Phan cong giang day va dung chung ngan hang de)
+CREATE INDEX IF NOT EXISTS ix_courses_code ON courses (course_code);
+
+-- 2. BẢNG PHÂN CÔNG GIẢNG VIÊN MÔN HỌC (COURSE_LECTURERS)
 CREATE TABLE IF NOT EXISTS course_lecturers (
     course_lecturers_id VARCHAR(20)  NOT NULL,
     courses_id          VARCHAR(20)  NOT NULL,
@@ -29,10 +31,9 @@ CREATE TABLE IF NOT EXISTS course_lecturers (
     CONSTRAINT uq_course_lecturers UNIQUE (courses_id, users_id)
 );
 
-CREATE INDEX IF NOT EXISTS ix_course_lecturers_course ON course_lecturers (courses_id);
 CREATE INDEX IF NOT EXISTS ix_course_lecturers_user ON course_lecturers (users_id);
 
--- 3. Tao bang chapters (Phan vung kien thuc truc thuoc Course)
+-- 3. BẢNG CHƯƠNG KIẾN THỨC (CHAPTERS)
 CREATE TABLE IF NOT EXISTS chapters (
     chapters_id VARCHAR(20)  NOT NULL,
     courses_id  VARCHAR(20)  NOT NULL,
@@ -48,113 +49,74 @@ CREATE TABLE IF NOT EXISTS chapters (
 
 CREATE INDEX IF NOT EXISTS ix_chapters_course_order ON chapters (courses_id, order_no);
 
--- 4. Dieu chinh / tao bang materials (Hoc lieu RAG phuc vu sinh cau hoi theo chapter)
+-- 4. BẢNG HỌC LIỆU RAG (MATERIALS)
+CREATE TABLE IF NOT EXISTS materials (
+    id             VARCHAR(50)  NOT NULL,
+    lecturer_id    VARCHAR(50)  NOT NULL,
+    lesson_id      VARCHAR(50)  NULL,
+    topic_id       VARCHAR(50)  NULL,
+    chapters_id    VARCHAR(50)  NULL,
+    uploaded_by    VARCHAR(50)  NULL,
+    title          VARCHAR(255) NOT NULL,
+    file_name      VARCHAR(255) NOT NULL,
+    file_size      BIGINT       NOT NULL,
+    file_type      VARCHAR(20)  NOT NULL,
+    gcs_uri        VARCHAR(500) NOT NULL,
+    rag_corpus_id  VARCHAR(100) NULL DEFAULT '6917529027641081856',
+    rag_status     VARCHAR(30)  NOT NULL DEFAULT 'INDEXING',
+    chunk_count    INTEGER      NULL DEFAULT 0,
+    error_message  TEXT         NULL,
+    created_at     TIMESTAMP(6) NOT NULL DEFAULT LOCALTIMESTAMP,
+
+    CONSTRAINT pk_materials PRIMARY KEY (id)
+);
+
+-- Bổ sung cột cho materials nếu bảng đã có sẵn từ trước
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS chapters_id VARCHAR(50) NULL;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS uploaded_by VARCHAR(50) NULL;
+
+-- 5. CẬP NHẬT BẢNG RUBRICS (RUBRIC DUY NHẤT CẤP MÔN HỌC & IMMUTABILITY LOCK)
+ALTER TABLE rubrics ADD COLUMN IF NOT EXISTS courses_id VARCHAR(20) NULL;
+ALTER TABLE rubrics ADD COLUMN IF NOT EXISTS is_locked BOOLEAN NOT NULL DEFAULT FALSE;
+
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'materials') THEN
-        CREATE TABLE materials (
-            materials_id VARCHAR(20)  NOT NULL,
-            chapters_id  VARCHAR(20)  NOT NULL,
-            uploaded_by  VARCHAR(20)  NOT NULL,
-            title        VARCHAR(200) NOT NULL,
-            file_url     VARCHAR(500) NOT NULL,
-            file_type    VARCHAR(20)  NOT NULL,
-            file_size    INTEGER      NOT NULL,
-            rag_status   VARCHAR(20)  NOT NULL DEFAULT 'INDEXING',
-            created_at   TIMESTAMP(6) NOT NULL DEFAULT LOCALTIMESTAMP,
-            updated_at   TIMESTAMP(6) NOT NULL DEFAULT LOCALTIMESTAMP,
-
-            CONSTRAINT pk_materials PRIMARY KEY (materials_id),
-            CONSTRAINT fk_materials_chapter FOREIGN KEY (chapters_id) REFERENCES chapters (chapters_id) ON DELETE CASCADE,
-            CONSTRAINT fk_materials_uploader FOREIGN KEY (uploaded_by) REFERENCES users (users_id),
-            CONSTRAINT ck_materials_rag_status CHECK (rag_status IN ('INDEXING', 'READY', 'FAILED'))
-        );
-    ELSE
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'materials' AND column_name = 'materials_id') THEN
-            ALTER TABLE materials ADD COLUMN materials_id VARCHAR(20);
-            UPDATE materials SET materials_id = SUBSTRING(id, 1, 20) WHERE materials_id IS NULL;
-            ALTER TABLE materials ALTER COLUMN materials_id SET NOT NULL;
-        END IF;
-
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'materials' AND column_name = 'chapters_id') THEN
-            ALTER TABLE materials ADD COLUMN chapters_id VARCHAR(20);
-        END IF;
-
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'materials' AND column_name = 'uploaded_by') THEN
-            ALTER TABLE materials ADD COLUMN uploaded_by VARCHAR(20);
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'materials' AND column_name = 'lecturer_id') THEN
-                UPDATE materials SET uploaded_by = SUBSTRING(lecturer_id, 1, 20) WHERE uploaded_by IS NULL;
-            END IF;
-        END IF;
-
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'materials' AND column_name = 'file_url') THEN
-            ALTER TABLE materials ADD COLUMN file_url VARCHAR(500);
-            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'materials' AND column_name = 'gcs_uri') THEN
-                UPDATE materials SET file_url = gcs_uri WHERE file_url IS NULL;
-            END IF;
-        END IF;
-
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'materials' AND column_name = 'updated_at') THEN
-            ALTER TABLE materials ADD COLUMN updated_at TIMESTAMP(6) NOT NULL DEFAULT LOCALTIMESTAMP;
-        END IF;
-    END IF;
-END $$;
-
-CREATE INDEX IF NOT EXISTS ix_materials_chapter ON materials (chapters_id);
-
--- 5. Dieu chinh bang rubrics (1:1 voi Course, ho tro is_locked)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'rubrics' AND column_name = 'courses_id') THEN
-        ALTER TABLE rubrics ADD COLUMN courses_id VARCHAR(20);
-        ALTER TABLE rubrics ADD CONSTRAINT uq_rubrics_course UNIQUE (courses_id);
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_rubrics_course') THEN
         ALTER TABLE rubrics ADD CONSTRAINT fk_rubrics_course FOREIGN KEY (courses_id) REFERENCES courses (courses_id) ON DELETE CASCADE;
     END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'rubrics' AND column_name = 'is_locked') THEN
-        ALTER TABLE rubrics ADD COLUMN is_locked BOOLEAN NOT NULL DEFAULT FALSE;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_rubrics_course') THEN
+        ALTER TABLE rubrics ADD CONSTRAINT uq_rubrics_course UNIQUE (courses_id);
     END IF;
 END $$;
 
--- 6. Dieu chinh bang questions (Loai bo rubrics_id va bloom_level, them chapters_id, created_by, difficulty)
+-- 6. CẬP NHẬT BẢNG QUESTIONS (NGÂN HÀNG DÙNG CHUNG THEO CHƯƠNG & ĐỘ KHÓ TRỰC QUAN)
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS chapters_id VARCHAR(20) NULL;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS created_by VARCHAR(20) NULL;
+ALTER TABLE questions ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20) NOT NULL DEFAULT 'MEDIUM';
+
+-- Cho phép NULL đối với các trường cấu trúc cũ để tương thích ngược
+ALTER TABLE questions ALTER COLUMN topics_id DROP NOT NULL;
+ALTER TABLE questions ALTER COLUMN rubrics_id DROP NOT NULL;
+ALTER TABLE questions ALTER COLUMN bloom_level DROP NOT NULL;
+
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'questions' AND column_name = 'rubrics_id') THEN
-        ALTER TABLE questions DROP CONSTRAINT IF EXISTS fk_questions_rubric;
-        ALTER TABLE questions DROP CONSTRAINT IF EXISTS ck_questions_approved_rubric;
-        ALTER TABLE questions DROP COLUMN IF EXISTS rubrics_id;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'questions' AND column_name = 'chapters_id') THEN
-        ALTER TABLE questions ADD COLUMN chapters_id VARCHAR(20);
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_questions_chapter') THEN
         ALTER TABLE questions ADD CONSTRAINT fk_questions_chapter FOREIGN KEY (chapters_id) REFERENCES chapters (chapters_id) ON DELETE CASCADE;
     END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'questions' AND column_name = 'created_by') THEN
-        ALTER TABLE questions ADD COLUMN created_by VARCHAR(20);
-        ALTER TABLE questions ADD CONSTRAINT fk_questions_creator FOREIGN KEY (created_by) REFERENCES users (users_id);
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'questions' AND column_name = 'difficulty') THEN
-        ALTER TABLE questions ADD COLUMN difficulty VARCHAR(20) NOT NULL DEFAULT 'MEDIUM';
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_questions_difficulty') THEN
         ALTER TABLE questions ADD CONSTRAINT ck_questions_difficulty CHECK (difficulty IN ('EASY', 'MEDIUM', 'HARD'));
-    END IF;
-
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'questions' AND column_name = 'bloom_level') THEN
-        ALTER TABLE questions DROP CONSTRAINT IF EXISTS ck_questions_bloom;
-        ALTER TABLE questions DROP COLUMN IF EXISTS bloom_level;
     END IF;
 END $$;
 
 CREATE INDEX IF NOT EXISTS ix_questions_chapter_status ON questions (chapters_id, status);
 
--- 7. Dieu chinh bang viva_exams (Them khoa ngoai courses_id)
+-- 7. CẬP NHẬT BẢNG VIVA_EXAMS (LIÊN KẾT CA THI VỚI MÔN HỌC)
+ALTER TABLE viva_exams ADD COLUMN IF NOT EXISTS courses_id VARCHAR(20) NULL;
+
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'viva_exams' AND column_name = 'courses_id') THEN
-        ALTER TABLE viva_exams ADD COLUMN courses_id VARCHAR(20);
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_viva_exams_course') THEN
         ALTER TABLE viva_exams ADD CONSTRAINT fk_viva_exams_course FOREIGN KEY (courses_id) REFERENCES courses (courses_id);
     END IF;
 END $$;
-
-CREATE INDEX IF NOT EXISTS ix_viva_exams_course ON viva_exams (courses_id);

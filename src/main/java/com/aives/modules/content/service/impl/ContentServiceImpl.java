@@ -377,6 +377,9 @@ public class ContentServiceImpl implements ContentService {
         if (request.getContent() != null && !request.getContent().isBlank()) {
             question.setContent(request.getContent().trim());
         }
+        if (request.getDifficulty() != null && !request.getDifficulty().isBlank()) {
+            question.setDifficulty(request.getDifficulty().trim().toUpperCase());
+        }
         if (request.getBloomLevel() != null && !request.getBloomLevel().isBlank()) {
             question.setBloomLevel(normalizeBloomLevel(request.getBloomLevel()));
         }

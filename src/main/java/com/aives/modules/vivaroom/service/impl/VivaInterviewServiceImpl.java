@@ -8,8 +8,10 @@ import com.aives.common.util.RandomIdGenerator;
 import com.aives.integration.ai.LlmClient;
 import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.content.entity.Question;
+import com.aives.modules.content.entity.Rubric;
 import com.aives.modules.content.repository.QuestionRepository;
 import com.aives.modules.content.repository.RubricCriterionRepository;
+import com.aives.modules.content.repository.RubricRepository;
 import com.aives.modules.content.service.ContentService;
 import com.aives.modules.exam.dto.ExamAttemptResponse;
 import com.aives.modules.exam.entity.VivaAttempt;
@@ -49,6 +51,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.StringUtils;
 
 /**
  * Trang thai phong van KHONG luu rieng ma suy ra tu bang interview_exchanges:
@@ -78,6 +81,7 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
     private final InterviewExchangeRepository exchangeRepository;
     private final QuestionRepository questionRepository;
     private final RubricCriterionRepository criterionRepository;
+    private final RubricRepository rubricRepository;
     private final ContentService contentService;
     private final ExamAttemptService examAttemptService;
     private final FollowUpDecisionService followUpDecisionService;
@@ -297,15 +301,17 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.EXAM_SESSION_NOT_FOUND));
                 int count = exam.getQuestionCount() != null ? exam.getQuestionCount() : Math.max(defaultQuestionCount, 1);
                 List<Question> picked;
-                if (!exam.getTopicIds().isEmpty()) {
+                if (StringUtils.hasText(exam.getCourseId())) {
+                    // Ca thi lien ket mon hoc: tu dong boc cau hoi da APPROVED tu Course/Chapters
+                    picked = pickRandomFromCourse(exam.getCourseId(), count);
+                    if (picked.isEmpty()) {
+                        picked = fallbackPick(exam, count);
+                    }
+                } else if (!exam.getTopicIds().isEmpty()) {
                     // Giang vien da chon chu de: boc ngau nhien, chia deu giua cac chu de
                     picked = pickRandomFromTopics(exam.getTopicIds(), count);
                 } else {
-                    PageRequest limit = PageRequest.of(0, count);
-                    picked = questionRepository.findByOwnerAndStatus(exam.getLecturerId(), QUESTION_APPROVED, limit);
-                    if (picked.isEmpty()) {
-                        picked = questionRepository.findByStatusOrderByCreatedAtAscIdAsc(QUESTION_APPROVED, limit);
-                    }
+                    picked = fallbackPick(exam, count);
                 }
                 int orderNo = 1;
                 for (Question question : picked) {
@@ -324,6 +330,43 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
             // 2 sinh vien vao cung luc: request kia da gan cau hoi truoc (dung UNIQUE exam + order_no)
             log.debug("Cau hoi cua phien {} da duoc request khac gan truoc", examId);
         }
+    }
+
+    private List<Question> pickRandomFromCourse(String courseId, int count) {
+        List<Question> questions = questionRepository.findByChapter_Course_IdAndStatus(courseId, QUESTION_APPROVED);
+        if (questions.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, List<Question>> byChapter = new LinkedHashMap<>();
+        for (Question question : questions) {
+            String chapterKey = question.getChapter() != null ? question.getChapter().getId() : "default";
+            byChapter.computeIfAbsent(chapterKey, key -> new ArrayList<>()).add(question);
+        }
+        List<List<Question>> groups = new ArrayList<>(byChapter.values());
+        Collections.shuffle(groups);
+        groups.forEach(Collections::shuffle);
+
+        List<Question> picked = new ArrayList<>();
+        boolean added = true;
+        for (int round = 0; added && picked.size() < count; round++) {
+            added = false;
+            for (List<Question> group : groups) {
+                if (round < group.size() && picked.size() < count) {
+                    picked.add(group.get(round));
+                    added = true;
+                }
+            }
+        }
+        return picked;
+    }
+
+    private List<Question> fallbackPick(VivaExam exam, int count) {
+        PageRequest limit = PageRequest.of(0, count);
+        List<Question> picked = questionRepository.findByOwnerAndStatus(exam.getLecturerId(), QUESTION_APPROVED, limit);
+        if (picked.isEmpty()) {
+            picked = questionRepository.findByStatusOrderByCreatedAtAscIdAsc(QUESTION_APPROVED, limit);
+        }
+        return picked;
     }
 
     /** Boc ngau nhien toi da count cau APPROVED: lan luot moi chu de 1 cau cho toi khi du hoac het cau. */
@@ -408,6 +451,18 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
         if (question.getRubric() != null) {
             criterionRepository.findByRubric_IdOrderByOrderNoAsc(question.getRubric().getId())
                     .forEach(item -> criteria.add(new Criterion(item.getName(), item.getDescription())));
+        } else {
+            // Tu dong ke thua tieu chi tu Rubric mon hoc (CourseRubric)
+            String courseId = snapshot.attempt().getExam().getCourseId();
+            if (!StringUtils.hasText(courseId) && question.getChapter() != null && question.getChapter().getCourse() != null) {
+                courseId = question.getChapter().getCourse().getId();
+            }
+            if (StringUtils.hasText(courseId)) {
+                rubricRepository.findByCourse_Id(courseId).ifPresent(courseRubric -> {
+                    criterionRepository.findByRubric_IdOrderByOrderNoAsc(courseRubric.getId())
+                            .forEach(item -> criteria.add(new Criterion(item.getName(), item.getDescription())));
+                });
+            }
         }
 
         // Cac luot hoi - dap cua CUNG cau hoi goc nay, theo thu tu: cau goc, hoi xoay 1, hoi xoay 2...
@@ -454,10 +509,24 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
                 .followUpNo(latest.getDepth())
                 .maxFollowUps(exam.getMaxFollowUpPerQuestion())
                 .bloomLevel(question.getBloomLevel())
-                .rubricName(question.getRubric() == null ? null : question.getRubric().getName())
+                .rubricName(resolveRubricName(question, exam))
                 .prepareSeconds(exam.getPrepareSeconds())
                 .answerSeconds(exam.getAnswerSeconds())
                 .build();
+    }
+
+    private String resolveRubricName(Question question, VivaExam exam) {
+        if (question.getRubric() != null) {
+            return question.getRubric().getName();
+        }
+        String courseId = exam != null ? exam.getCourseId() : null;
+        if (!StringUtils.hasText(courseId) && question.getChapter() != null && question.getChapter().getCourse() != null) {
+            courseId = question.getChapter().getCourse().getId();
+        }
+        if (StringUtils.hasText(courseId)) {
+            return rubricRepository.findByCourse_Id(courseId).map(Rubric::getName).orElse(null);
+        }
+        return null;
     }
 
     private InterviewStateResponse completedState(boolean aiFallback) {

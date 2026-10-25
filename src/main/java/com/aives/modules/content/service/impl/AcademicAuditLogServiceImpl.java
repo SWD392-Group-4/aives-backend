@@ -1,10 +1,14 @@
-﻿package com.aives.modules.content.service.impl;
+package com.aives.modules.content.service.impl;
 
+import com.aives.common.dto.PageResponse;
 import com.aives.modules.content.document.AcademicAuditLog;
 import com.aives.modules.content.dto.AcademicAuditLogResponse;
+import com.aives.modules.content.enums.AuditAction;
 import com.aives.modules.content.repository.AcademicAuditLogRepository;
-import com.aives.modules.content.service.IAcademicAuditLogService;
-import java.time.LocalDateTime;
+import com.aives.modules.content.service.AcademicAuditLogService;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,44 +19,78 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AcademicAuditLogServiceImpl implements IAcademicAuditLogService {
+public class AcademicAuditLogServiceImpl implements AcademicAuditLogService {
 
-    private final AcademicAuditLogRepository auditLogRepository;
+    private final AcademicAuditLogRepository academicAuditLogRepository;
 
     @Async
     @Override
-    public void logActivity(AcademicAuditLog logRecord) {
+    public void logActivity(
+            String courseId,
+            String chapterId,
+            String actorId,
+            String actorName,
+            AuditAction action,
+            String targetEntity,
+            String targetId,
+            Map<String, Object> details) {
         try {
-            if (logRecord.getCreatedAt() == null) {
-                logRecord.setCreatedAt(LocalDateTime.now());
-            }
-            auditLogRepository.save(logRecord);
-            log.info("Ghi log kiem toan thanh cong: action={}, actorId={}, targetEntity={}, targetId={}",
-                    logRecord.getAction(), logRecord.getActorId(), logRecord.getTargetEntity(), logRecord.getTargetId());
+            AcademicAuditLog auditLog = AcademicAuditLog.builder()
+                    .courseId(courseId)
+                    .chapterId(chapterId)
+                    .actorId(actorId)
+                    .actorName(actorName)
+                    .action(action != null ? action.name() : null)
+                    .targetEntity(targetEntity)
+                    .targetId(targetId)
+                    .details(details)
+                    .createdAt(Instant.now())
+                    .build();
+
+            academicAuditLogRepository.save(auditLog);
+            log.debug("Persisted AcademicAuditLog to MongoDB: action={}, courseId={}, targetId={}",
+                    action, courseId, targetId);
         } catch (Exception ex) {
-            log.error("Loi khi ghi log kiem toan vao MongoDB (khong block transaction chinh): {}", ex.getMessage(), ex);
+            log.error("Failed to write AcademicAuditLog to MongoDB for courseId: {}, action: {}", courseId, action, ex);
         }
     }
 
     @Override
-    public Page<AcademicAuditLogResponse> getLogsByCourse(String courseId, Pageable pageable) {
-        log.info("Lay lich su kiem toan cho mon hoc: courseId={}, page={}, size={}", courseId, pageable.getPageNumber(), pageable.getPageSize());
-        Page<AcademicAuditLog> logs = auditLogRepository.findByCourseIdOrderByCreatedAtDesc(courseId, pageable);
-        return logs.map(this::mapToResponse);
+    public PageResponse<AcademicAuditLogResponse> getLogsByCourse(String courseId, Pageable pageable) {
+        Page<AcademicAuditLog> page = academicAuditLogRepository.findByCourseIdOrderByCreatedAtDesc(courseId, pageable);
+        List<AcademicAuditLogResponse> content = page.getContent().stream()
+                .map(this::toResponse)
+                .toList();
+
+        return new PageResponse<>(
+                content,
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalElements(),
+                page.getTotalPages()
+        );
     }
 
-    private AcademicAuditLogResponse mapToResponse(AcademicAuditLog entity) {
+    private AcademicAuditLogResponse toResponse(AcademicAuditLog doc) {
+        AuditAction parsedAction = null;
+        if (doc.getAction() != null) {
+            try {
+                parsedAction = AuditAction.valueOf(doc.getAction());
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+
         return AcademicAuditLogResponse.builder()
-                .id(entity.getId())
-                .courseId(entity.getCourseId())
-                .chapterId(entity.getChapterId())
-                .actorId(entity.getActorId())
-                .actorName(entity.getActorName())
-                .action(entity.getAction())
-                .targetEntity(entity.getTargetEntity())
-                .targetId(entity.getTargetId())
-                .details(entity.getDetails())
-                .createdAt(entity.getCreatedAt())
+                .id(doc.getId())
+                .courseId(doc.getCourseId())
+                .chapterId(doc.getChapterId())
+                .actorId(doc.getActorId())
+                .actorName(doc.getActorName())
+                .action(parsedAction)
+                .targetEntity(doc.getTargetEntity())
+                .targetId(doc.getTargetId())
+                .details(doc.getDetails())
+                .createdAt(doc.getCreatedAt())
                 .build();
     }
 }

@@ -1,10 +1,10 @@
-﻿package com.aives.modules.content.dto;
+package com.aives.modules.content.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,20 +19,24 @@ import lombok.Setter;
 @Builder
 public class RubricCriteriaDto {
 
+    @Schema(example = "RC_01", description = "Mã tiêu chí (nếu cập nhật tiêu chí đã có)")
     private String id;
 
+    @Schema(example = "Khái niệm cốt lõi & Định nghĩa", description = "Tên tiêu chí")
     @NotBlank(message = "Tên tiêu chí không được để trống")
-    @Size(max = 200, message = "Tên tiêu chí tối đa 200 ký tự")
     private String name;
 
-    @NotBlank(message = "Mô tả tiêu chí không được để trống (BR-BANK-003)")
+    @Schema(example = "Nêu chính xác định nghĩa, phân biệt được các trường hợp sử dụng.", description = "Tiêu chuẩn chi tiết để đạt điểm")
+    @NotBlank(message = "Mô tả tiêu chuẩn tiêu chí không được để trống")
     private String description;
 
+    @Schema(example = "30.0", description = "Trọng số phần trăm (tổng các tiêu chí = 100%)")
     @NotNull(message = "Trọng số phần trăm không được để trống")
-    @DecimalMin(value = "0.01", message = "Trọng số tối thiểu là 0.01%")
-    @DecimalMax(value = "100.00", message = "Trọng số tối đa là 100.00%")
+    @DecimalMin(value = "0.01", message = "Trọng số phần trăm phải lớn hơn 0")
+    @DecimalMax(value = "100.00", message = "Trọng số phần trăm tối đa là 100")
     private BigDecimal weightPercent;
 
-    @NotNull(message = "Thứ tự tiêu chí không được để trống")
+    @Schema(example = "1", description = "Thứ tự hiển thị")
+    @NotNull(message = "Thứ tự hiển thị không được để trống")
     private Integer orderNo;
 }

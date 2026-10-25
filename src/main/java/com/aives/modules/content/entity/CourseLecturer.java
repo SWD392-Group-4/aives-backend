@@ -1,7 +1,6 @@
 package com.aives.modules.content.entity;
 
 import com.aives.common.entity.BaseEntity;
-import com.aives.modules.auth.entity.User;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -34,7 +33,6 @@ public class CourseLecturer extends BaseEntity {
     @JoinColumn(name = "courses_id", referencedColumnName = "courses_id", nullable = false)
     private Course course;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "users_id", referencedColumnName = "users_id", nullable = false)
-    private User user;
+    @Column(name = "users_id", nullable = false, length = 20)
+    private String userId;
 }

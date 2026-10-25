@@ -960,8 +960,14 @@ public class GoogleCloudRagService {
                     .orElse(null);
         }
 
+        String fileUrl = m.getGcsUri();
+        if (fileUrl != null && fileUrl.startsWith("gs://")) {
+            fileUrl = "https://storage.googleapis.com/" + fileUrl.substring(5);
+        }
+
         return MaterialResponse.builder()
                 .id(m.getId())
+                .chapterId(m.getChapterId())
                 .lecturerId(m.getLecturerId())
                 .lessonId(m.getLessonId())
                 .lessonTitle(lessonTitle)
@@ -972,6 +978,7 @@ public class GoogleCloudRagService {
                 .fileSize(m.getFileSize())
                 .fileType(m.getFileType())
                 .gcsUri(m.getGcsUri())
+                .fileUrl(fileUrl)
                 .ragCorpusId(m.getRagCorpusId())
                 .ragStatus(m.getRagStatus())
                 .chunkCount(m.getChunkCount())

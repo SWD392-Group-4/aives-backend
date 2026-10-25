@@ -1,5 +1,7 @@
-﻿package com.aives.modules.content.dto;
+package com.aives.modules.content.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -16,12 +18,16 @@ import lombok.Setter;
 @Builder
 public class CreateChapterRequest {
 
+    @Schema(example = "Chương 2 - Microservices Communication", description = "Tên chương")
     @NotBlank(message = "Tên chương không được để trống")
     @Size(max = 200, message = "Tên chương tối đa 200 ký tự")
     private String name;
 
-    @NotNull(message = "Thứ tự chương không được để trống")
+    @Schema(example = "2", description = "Thứ tự sắp xếp chương")
+    @NotNull(message = "Thứ tự sắp xếp không được để trống")
+    @Min(value = 1, message = "Thứ tự sắp xếp phải lớn hơn hoặc bằng 1")
     private Integer orderNo;
 
+    @Schema(example = "Giao tiếp REST và gRPC giữa các services", description = "Mô tả chương")
     private String description;
 }

@@ -208,10 +208,21 @@ class AdminUserApiTest {
 
     @Test
     void register_keepsOwnPasswordAndSendsNoMail() throws Exception {
+        Map<String, Object> sendOtpBody = new LinkedHashMap<>();
+        sendOtpBody.put("email", "tu.dang.ky@fpt.edu.vn");
+        mockMvc.perform(json(post("/api/auth/send-otp"), sendOtpBody))
+                .andExpect(status().isOk());
+        assertThat(mailService.sent).hasSize(1);
+        MailMessage otpMail = mailService.sent.remove(0);
+        Matcher matcher = Pattern.compile("Mã xác thực \\(OTP\\) của bạn là: (\\d{6})").matcher(otpMail.textBody());
+        assertThat(matcher.find()).isTrue();
+        String otpCode = matcher.group(1);
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("email", "tu.dang.ky@fpt.edu.vn");
         body.put("password", "MatKhau123");
         body.put("fullName", "Tự Đăng Ký");
+        body.put("otp", otpCode);
         mockMvc.perform(json(post("/api/auth/register"), body))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.role").value("STUDENT"))

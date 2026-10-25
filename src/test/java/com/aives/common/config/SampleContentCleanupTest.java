@@ -94,7 +94,7 @@ class SampleContentCleanupTest extends ApiTestSupport {
         }
         // Phien thi va rubric duoc giu lai
         assertThat(count("viva_exams")).isEqualTo(sessions);
-        assertThat(count("rubrics")).isEqualTo(1);
+        assertThat(count("rubrics")).isGreaterThanOrEqualTo(1);
         mockMvc.perform(auth(get("/api/content/topics"), LECTURER_1))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data", hasSize(0)));

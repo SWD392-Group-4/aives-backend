@@ -1,4 +1,4 @@
-﻿package com.aives.modules.content.repository;
+package com.aives.modules.content.repository;
 
 import com.aives.modules.content.document.AcademicAuditLog;
 import org.springframework.data.domain.Page;
@@ -8,6 +8,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AcademicAuditLogRepository extends MongoRepository<AcademicAuditLog, String> {
-
     Page<AcademicAuditLog> findByCourseIdOrderByCreatedAtDesc(String courseId, Pageable pageable);
 }

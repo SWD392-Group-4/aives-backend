@@ -52,6 +52,16 @@ public class ExamSessionRequest {
     @Max(value = 10, message = "Số lượt thi tối đa không quá 10")
     private Integer maxAttempts;
 
+    @Schema(example = "CS101", description = "Id môn học tổ chức thi")
+    @Size(max = 20, message = "Id môn học tối đa 20 ký tự")
+    private String courseId;
+
+    @Schema(example = "[\"CHAP01\"]", description = "Danh sách ID các chương được chọn để bốc câu hỏi")
+    private List<String> chapterIds;
+
+    @Schema(example = "[\"QS001\"]", description = "Danh sách ID các câu hỏi đã APPROVED được chọn cố định cho phiên thi")
+    private List<String> questionIds;
+
     @Schema(example = "[\"TP0123456789\"]", description = "Id các chủ đề lấy câu hỏi cho phiên (1 hoặc nhiều). "
             + "Bỏ trống khi sửa: giữ nguyên. Chỉ đổi được khi phiên chưa mở")
     @Size(max = 20, message = "Mỗi phiên thi chọn tối đa 20 chủ đề")

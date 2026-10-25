@@ -4,6 +4,7 @@ import com.aives.common.security.UserPrincipal;
 import com.aives.modules.grading.dto.AttemptReviewResponse;
 import com.aives.modules.grading.dto.GradingAttemptResponse;
 import com.aives.modules.grading.dto.QuestionGradeResponse;
+import com.aives.modules.grading.dto.SaveQuestionGradeRequest;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -17,6 +18,9 @@ public interface GradingService {
 
     /** Giang vien chot diem 1 cau. Lech qua 2 diem so voi diem AI thi bat buoc co ghi chu (BR-GRADE-002). */
     QuestionGradeResponse saveQuestionGrade(UserPrincipal actor, String questionGradeId, BigDecimal finalScore, String lecturerNote);
+
+    /** Giang vien chot diem 1 cau kem theo diem tung tieu chi (BR-GRADE-001, BR-GRADE-002). */
+    QuestionGradeResponse saveQuestionGrade(UserPrincipal actor, String questionGradeId, SaveQuestionGradeRequest request);
 
     /** Cong bo ket qua cho sinh vien. Moi cau phai duoc giang vien chot diem truoc (BR-GRADE-003). */
     GradingAttemptResponse publish(UserPrincipal actor, String attemptId);

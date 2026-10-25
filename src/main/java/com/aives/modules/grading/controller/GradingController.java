@@ -58,7 +58,7 @@ public class GradingController {
             @Valid @RequestBody SaveQuestionGradeRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
         return ApiResponse.ok("Đã chốt điểm câu hỏi", gradingService.saveQuestionGrade(
-                principal, questionGradeId, request.getFinalScore(), request.getLecturerNote()));
+                principal, questionGradeId, request));
     }
 
     @Operation(summary = "Công bố kết quả cho sinh viên. Mọi câu phải được chốt điểm trước")

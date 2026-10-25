@@ -1,10 +1,10 @@
-﻿package com.aives.modules.content.controller;
+package com.aives.modules.content.controller;
 
 import com.aives.common.dto.ApiResponse;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.content.dto.CourseRubricResponse;
 import com.aives.modules.content.dto.UpdateCourseRubricRequest;
-import com.aives.modules.content.service.ICourseRubricService;
+import com.aives.modules.content.service.CourseRubricService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,31 +19,29 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Course Rubric", description = "Quản lý Rubric chuẩn duy nhất của môn học")
+@Tag(name = "Course Rubric", description = "Quản lý Rubric chuẩn duy nhất của môn học (BR-BANK-001, BR-BANK-006)")
 @RestController
-@RequestMapping("/api/v1/courses/{courseId}/rubric")
+@RequestMapping("/api/v1/courses")
+@PreAuthorize("hasAnyRole('LECTURER', 'ADMIN')")
 @RequiredArgsConstructor
 public class CourseRubricController {
 
-    private final ICourseRubricService courseRubricService;
+    private final CourseRubricService courseRubricService;
 
-    @Operation(summary = "Lấy Rubric chuẩn duy nhất của môn học", description = "Trả về bộ Rubric duy nhất của môn học kèm danh sách tiêu chí và trạng thái khóa.")
-    @GetMapping
+    @Operation(summary = "Lấy Rubric chuẩn duy nhất của môn học")
+    @GetMapping("/{courseId}/rubric")
     public ApiResponse<CourseRubricResponse> getCourseRubric(
-            @Parameter(description = "Mã định danh môn học") @PathVariable String courseId) {
-        CourseRubricResponse response = courseRubricService.getRubricByCourseId(courseId);
-        return ApiResponse.ok("Lấy thông tin Rubric thành công", response);
+            @PathVariable String courseId) {
+        return ApiResponse.ok(courseRubricService.getRubricByCourseId(courseId));
     }
 
-    @Operation(summary = "Thiết lập hoặc cập nhật Rubric duy nhất của môn học",
-            description = "Giảng viên cập nhật các tiêu chí Rubric của môn học. Tổng weight bắt buộc = 100% (BR-BANK-001) và chặn nếu đã bị khóa (BR-BANK-006).")
-    @PreAuthorize("hasAnyRole('LECTURER', 'ADMIN')")
-    @PutMapping
+    @Operation(summary = "Thiết lập hoặc cập nhật Rubric duy nhất của môn học")
+    @PutMapping("/{courseId}/rubric")
     public ApiResponse<CourseRubricResponse> updateCourseRubric(
-            @Parameter(description = "Mã định danh môn học") @PathVariable String courseId,
+            @PathVariable String courseId,
             @Valid @RequestBody UpdateCourseRubricRequest request,
-            @AuthenticationPrincipal UserPrincipal principal) {
-        CourseRubricResponse response = courseRubricService.updateRubric(courseId, request, principal.getId());
-        return ApiResponse.ok("Cập nhật Rubric thành công", response);
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        CourseRubricResponse response = courseRubricService.updateRubric(courseId, request, principal);
+        return ApiResponse.ok("Cập nhật Rubric chuẩn của môn học thành công", response);
     }
 }

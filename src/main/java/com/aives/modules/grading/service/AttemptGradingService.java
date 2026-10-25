@@ -2,9 +2,12 @@ package com.aives.modules.grading.service;
 
 import com.aives.common.util.RandomIdGenerator;
 import com.aives.modules.content.entity.Question;
+import com.aives.modules.content.entity.Rubric;
 import com.aives.modules.content.entity.RubricCriterion;
 import com.aives.modules.content.repository.RubricCriterionRepository;
+import com.aives.modules.content.repository.RubricRepository;
 import com.aives.modules.exam.entity.VivaAttempt;
+import com.aives.modules.exam.entity.VivaExam;
 import com.aives.modules.exam.entity.VivaExamQuestion;
 import com.aives.modules.exam.enums.AttemptStatus;
 import com.aives.modules.exam.repository.VivaAttemptRepository;
@@ -36,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.util.StringUtils;
 
 /**
  * AI cham 1 luot thi sau khi sinh vien thi xong (giai doan 3 trong tai lieu kien truc).
@@ -69,6 +73,7 @@ public class AttemptGradingService {
     private final VivaExamQuestionRepository examQuestionRepository;
     private final InterviewExchangeRepository exchangeRepository;
     private final RubricCriterionRepository criterionRepository;
+    private final RubricRepository rubricRepository;
     private final QuestionGradeRepository questionGradeRepository;
     private final CriteriaGradeRepository criteriaGradeRepository;
     private final AnswerGrader answerGrader;
@@ -147,8 +152,8 @@ public class AttemptGradingService {
 
     /** Tinh lai tong diem AI va tong diem chot cua luot thi tu diem tung cau. Goi trong transaction. */
     public void refreshTotals(VivaAttempt attempt, List<QuestionGrade> grades) {
-        attempt.setTotalAiScore(weightedTotal(grades, false));
-        attempt.setTotalFinalScore(weightedTotal(grades, true));
+        attempt.setTotalAiScore(weightedTotal(attempt, grades, false));
+        attempt.setTotalFinalScore(weightedTotal(attempt, grades, true));
     }
 
     /* ========================= NOI BO ========================= */
@@ -170,6 +175,11 @@ public class AttemptGradingService {
             alreadyGraded.add(grade.getExamQuestion().getId());
         }
 
+        String examCourseId = attempt.getExam() != null ? attempt.getExam().getCourseId() : null;
+        Rubric examCourseRubric = StringUtils.hasText(examCourseId)
+                ? rubricRepository.findByCourse_Id(examCourseId).orElse(null)
+                : null;
+
         List<Job> jobs = new ArrayList<>();
         for (VivaExamQuestion examQuestion : examQuestions) {
             if (alreadyGraded.contains(examQuestion.getId())) {
@@ -179,9 +189,21 @@ public class AttemptGradingService {
             List<Criterion> criteria = new ArrayList<>();
             BigDecimal maxScore = TEN;
             if (question.getRubric() != null) {
-                maxScore = question.getRubric().getMaxScore();
+                maxScore = question.getRubric().getMaxScore() != null ? question.getRubric().getMaxScore() : TEN;
                 for (RubricCriterion item : criterionRepository.findByRubric_IdOrderByOrderNoAsc(question.getRubric().getId())) {
                     criteria.add(new Criterion(item.getId(), item.getName(), item.getDescription(), item.getWeightPercent()));
+                }
+            } else {
+                // Ke thua tieu chi tu Rubric mon hoc (CourseRubric)
+                Rubric courseRubric = examCourseRubric;
+                if (courseRubric == null && question.getChapter() != null && question.getChapter().getCourse() != null) {
+                    courseRubric = rubricRepository.findByCourse_Id(question.getChapter().getCourse().getId()).orElse(null);
+                }
+                if (courseRubric != null) {
+                    maxScore = courseRubric.getMaxScore() != null ? courseRubric.getMaxScore() : TEN;
+                    for (RubricCriterion item : criterionRepository.findByRubric_IdOrderByOrderNoAsc(courseRubric.getId())) {
+                        criteria.add(new Criterion(item.getId(), item.getName(), item.getDescription(), item.getWeightPercent()));
+                    }
                 }
             }
             List<Turn> turns = new ArrayList<>();
@@ -255,9 +277,10 @@ public class AttemptGradingService {
      * useFinal = true: dung diem giang vien chot, tra null neu con cau chua chot.
      * useFinal = false: dung diem AI, cau AI khong cham duoc tinh 0.
      */
-    private BigDecimal weightedTotal(List<QuestionGrade> grades, boolean useFinal) {
+    private BigDecimal weightedTotal(VivaAttempt attempt, List<QuestionGrade> grades, boolean useFinal) {
         BigDecimal sum = BigDecimal.ZERO;
         BigDecimal weightSum = BigDecimal.ZERO;
+        VivaExam exam = attempt != null ? attempt.getExam() : null;
         for (QuestionGrade grade : grades) {
             BigDecimal score = useFinal ? grade.getFinalScore() : grade.getAiScore();
             if (score == null) {
@@ -267,9 +290,7 @@ public class AttemptGradingService {
                 score = BigDecimal.ZERO;
             }
             VivaExamQuestion examQuestion = grade.getExamQuestion();
-            BigDecimal maxScore = examQuestion.getQuestion().getRubric() == null
-                    ? TEN
-                    : examQuestion.getQuestion().getRubric().getMaxScore();
+            BigDecimal maxScore = resolveMaxScore(examQuestion, exam);
             BigDecimal onTen = score.multiply(TEN).divide(maxScore, 6, RoundingMode.HALF_UP);
             sum = sum.add(onTen.multiply(examQuestion.getWeight()));
             weightSum = weightSum.add(examQuestion.getWeight());
@@ -278,6 +299,25 @@ public class AttemptGradingService {
             return null;
         }
         return sum.divide(weightSum, 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal resolveMaxScore(VivaExamQuestion examQuestion, VivaExam exam) {
+        if (examQuestion.getQuestion().getRubric() != null) {
+            return examQuestion.getQuestion().getRubric().getMaxScore() != null
+                    ? examQuestion.getQuestion().getRubric().getMaxScore()
+                    : TEN;
+        }
+        String courseId = exam != null ? exam.getCourseId() : null;
+        if (!StringUtils.hasText(courseId) && examQuestion.getQuestion().getChapter() != null
+                && examQuestion.getQuestion().getChapter().getCourse() != null) {
+            courseId = examQuestion.getQuestion().getChapter().getCourse().getId();
+        }
+        if (StringUtils.hasText(courseId)) {
+            return rubricRepository.findByCourse_Id(courseId)
+                    .map(r -> r.getMaxScore() != null ? r.getMaxScore() : TEN)
+                    .orElse(TEN);
+        }
+        return TEN;
     }
 
     private LocalDateTime now() {

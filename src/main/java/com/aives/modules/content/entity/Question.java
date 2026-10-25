@@ -34,21 +34,31 @@ import org.hibernate.annotations.Nationalized;
 @Builder
 public class Question extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "chapters_id", referencedColumnName = "chapters_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "topics_id", referencedColumnName = "topics_id")
+    private Topic topic;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chapters_id", referencedColumnName = "chapters_id")
     private Chapter chapter;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "created_by", referencedColumnName = "users_id", nullable = false)
-    private User createdBy;
+    @Column(name = "created_by", length = 20)
+    private String createdBy;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rubrics_id", referencedColumnName = "rubrics_id")
+    private Rubric rubric;
 
     @Nationalized
     @Column(name = "content", nullable = false, length = Length.LONG32)
     private String content;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "difficulty", nullable = false, length = 20)
-    private QuestionDifficulty difficulty;
+    @Builder.Default
+    @Column(name = "difficulty", length = 20)
+    private String difficulty = "MEDIUM";
+
+    @Column(name = "bloom_level", length = 20)
+    private String bloomLevel;
 
     @Nationalized
     @Column(name = "model_answer", length = Length.LONG32)

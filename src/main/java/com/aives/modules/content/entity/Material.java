@@ -40,6 +40,12 @@ public class Material extends BaseEntity {
     @JoinColumn(name = "uploaded_by", referencedColumnName = "users_id")
     private User uploadedBy;
 
+    @Column(name = "chapters_id", length = 50)
+    private String chapterId;
+
+    @Column(name = "uploaded_by", length = 50)
+    private String uploadedBy;
+
     @Nationalized
     @Column(name = "title", nullable = false, length = 200)
     private String title;

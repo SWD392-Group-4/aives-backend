@@ -1,164 +1,149 @@
-﻿package com.aives.modules.content.service.impl;
+package com.aives.modules.content.service.impl;
 
 import com.aives.common.exception.BusinessException;
 import com.aives.common.exception.ErrorCode;
+import com.aives.common.security.UserPrincipal;
+import com.aives.common.util.AuditTime;
 import com.aives.common.util.RandomIdGenerator;
-import com.aives.modules.auth.entity.User;
-import com.aives.modules.auth.repository.UserRepository;
 import com.aives.modules.content.dto.MaterialResponse;
 import com.aives.modules.content.entity.Chapter;
 import com.aives.modules.content.entity.Material;
-import com.aives.modules.content.enums.MaterialRagStatus;
 import com.aives.modules.content.repository.ChapterRepository;
 import com.aives.modules.content.repository.MaterialRepository;
-import com.aives.modules.content.service.IMaterialService;
+import com.aives.modules.content.service.GoogleCloudRagService;
+import com.aives.modules.content.service.MaterialService;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MaterialServiceImpl implements IMaterialService {
+public class MaterialServiceImpl implements MaterialService {
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pptx", "ppt", "pdf", "docx");
+    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024L; // 50MB
 
     private final ChapterRepository chapterRepository;
     private final MaterialRepository materialRepository;
-    private final UserRepository userRepository;
+    private final GoogleCloudRagService googleCloudRagService;
     private final RandomIdGenerator idGenerator;
-
-    @Value("${app.rag.bucket-name:exam-slides-bucket-2026}")
-    private String gcsBucketName;
-
-    @Value("${app.rag.corpus-id:6917529027641081856}")
-    private String ragCorpusId;
 
     @Override
     @Transactional(readOnly = true)
     public List<MaterialResponse> getMaterialsByChapterId(String chapterId) {
-        log.info("Lay danh sach hoc lieu cua chuong: chapterId={}", chapterId);
         if (!chapterRepository.existsById(chapterId)) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "Không tìm thấy chương " + chapterId);
+            throw new BusinessException(ErrorCode.CHAPTER_NOT_FOUND, "Không tìm thấy chương: " + chapterId);
         }
-
-        List<Material> materials = materialRepository.findByChapter_IdOrderByCreatedAtDesc(chapterId);
-        return materials.stream().map(this::mapToResponse).toList();
+        List<Material> materials = materialRepository.findByChapterIdOrderByCreatedAtDesc(chapterId);
+        return materials.stream().map(this::toResponse).toList();
     }
 
     @Override
     @Transactional
-    public MaterialResponse uploadMaterial(String chapterId, MultipartFile file, String lecturerId) {
-        log.info("Upload hoc lieu cho chuong: chapterId={}, file={}, lecturerId={}", chapterId, file.getOriginalFilename(), lecturerId);
+    public MaterialResponse uploadMaterial(String chapterId, MultipartFile file, UserPrincipal principal) {
         Chapter chapter = chapterRepository.findById(chapterId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "Không tìm thấy chương " + chapterId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAPTER_NOT_FOUND, "Không tìm thấy chương: " + chapterId));
 
-        User lecturer = userRepository.findById(lecturerId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "Không tìm thấy thông tin giảng viên"));
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "File tải lên không được để trống");
+        }
 
-        // Validation file (BR-MAT-001): chi nhan .pdf, .pptx, .ppt dung luong <= 50MB
-        if (file.isEmpty()) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Tệp tải lên không được để trống");
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "File quá lớn! Dung lượng tối đa là 50MB");
         }
 
         String originalFilename = file.getOriginalFilename();
-        String extension = StringUtils.getFilenameExtension(originalFilename);
-        if (extension == null || (!extension.equalsIgnoreCase("pdf")
-                && !extension.equalsIgnoreCase("pptx")
-                && !extension.equalsIgnoreCase("ppt"))) {
-            throw new BusinessException(ErrorCode.MATERIAL_INVALID_TYPE, "Định dạng file không hỗ trợ: chỉ chấp nhận .pdf, .pptx, .ppt");
+        String ext = getFileExtension(originalFilename);
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new BusinessException(ErrorCode.MATERIAL_INVALID_TYPE,
+                    "Định dạng file không hỗ trợ: chỉ chấp nhận .pptx, .ppt, .pdf, .docx");
         }
 
-        if (file.getSize() > 50 * 1024 * 1024L) {
-            throw new BusinessException(ErrorCode.BAD_REQUEST, "Dung lượng tệp vượt quá giới hạn 50MB");
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (IOException ex) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "Không đọc được dữ liệu file tải lên");
         }
 
-        String materialId = idGenerator.next("MA");
-        String courseId = chapter.getCourse().getId();
-        String gcsKey = String.format("courses/%s/chapters/%s/%s_%s", courseId, chapterId, materialId, originalFilename);
-        String gcsUrl = String.format("gs://%s/%s", gcsBucketName, gcsKey);
+        String gcsUri = googleCloudRagService.uploadToGcs(originalFilename, fileBytes, file.getContentType());
 
-        // Luu metadata vao DB o trang thai INDEXING
         Material material = Material.builder()
-                .chapter(chapter)
-                .uploadedBy(lecturer)
-                .title(originalFilename)
-                .fileUrl(gcsUrl)
-                .fileType(extension.toLowerCase())
+                .id(idGenerator.next("MAT"))
+                .chapterId(chapter.getId())
+                .uploadedBy(principal.getId())
+                .lecturerId(principal.getId())
+                .title(originalFilename != null ? originalFilename : "Tài liệu học liệu")
+                .fileName(originalFilename != null ? originalFilename : "slide." + ext)
                 .fileSize(file.getSize())
-                .ragStatus(MaterialRagStatus.INDEXING)
-                .ragCorpusId(ragCorpusId)
+                .fileType(ext)
+                .gcsUri(gcsUri)
+                .ragStatus("INDEXING")
                 .chunkCount(0)
+                .createdAt(LocalDateTime.now())
                 .build();
-        material.setId(materialId);
 
-        material = materialRepository.save(material);
+        Material saved = materialRepository.save(material);
+        log.info("Saved Material record: id={}, chapterId={}, gcsUri={}", saved.getId(), chapterId, gcsUri);
 
-        // Kich hoat tien trinh doc va lap chi muc RAG bat dong bo
-        processRagIndexingAsync(material.getId());
+        googleCloudRagService.triggerRagImportAsync(saved.getId(), gcsUri);
 
-        return mapToResponse(material);
+        return toResponse(saved);
     }
 
     @Override
     @Transactional
-    public MaterialResponse triggerReindex(String materialId, String lecturerId) {
-        log.info("Kich hoat lap chi muc lai cho hoc lieu: materialId={}, lecturerId={}", materialId, lecturerId);
+    public MaterialResponse reindexMaterial(String materialId, UserPrincipal principal) {
         Material material = materialRepository.findById(materialId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MATERIAL_NOT_FOUND, "Không tìm thấy tài liệu " + materialId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MATERIAL_NOT_FOUND, "Không tìm thấy học liệu: " + materialId));
 
-        material.setRagStatus(MaterialRagStatus.INDEXING);
+        material.setRagStatus("INDEXING");
         material.setErrorMessage(null);
-        material = materialRepository.save(material);
+        Material saved = materialRepository.save(material);
 
-        processRagIndexingAsync(material.getId());
-        return mapToResponse(material);
+        googleCloudRagService.triggerRagImportAsync(saved.getId(), saved.getGcsUri());
+        log.info("Triggered reindex for material: id={}", saved.getId());
+
+        return toResponse(saved);
     }
 
-    @Async
-    public void processRagIndexingAsync(String materialId) {
-        try {
-            log.info("Bat dau lap chi muc RAG cho hoc lieu: materialId={}", materialId);
-            // Mo phong qua trinh chunking va embedding tren Vertex AI RAG Engine
-            Thread.sleep(3000);
-
-            Material material = materialRepository.findById(materialId).orElse(null);
-            if (material != null) {
-                material.setRagStatus(MaterialRagStatus.READY);
-                material.setChunkCount(15);
-                materialRepository.save(material);
-                log.info("Lap chi muc RAG thanh cong: materialId={}, status=READY", materialId);
-            }
-        } catch (Exception ex) {
-            log.error("Loi khi lap chi muc RAG cho hoc lieu: materialId={}, err={}", materialId, ex.getMessage(), ex);
-            Material material = materialRepository.findById(materialId).orElse(null);
-            if (material != null) {
-                material.setRagStatus(MaterialRagStatus.FAILED);
-                material.setErrorMessage(ex.getMessage());
-                materialRepository.save(material);
-            }
+    private String getFileExtension(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "";
         }
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
     }
 
-    private MaterialResponse mapToResponse(Material material) {
+    private MaterialResponse toResponse(Material m) {
+        String fileUrl = m.getGcsUri();
+        if (fileUrl != null && fileUrl.startsWith("gs://")) {
+            fileUrl = "https://storage.googleapis.com/" + fileUrl.substring(5);
+        }
+
         return MaterialResponse.builder()
-                .id(material.getId())
-                .chapterId(material.getChapter() != null ? material.getChapter().getId() : null)
-                .title(material.getTitle())
-                .fileUrl(material.getFileUrl())
-                .fileType(material.getFileType())
-                .fileSize(material.getFileSize())
-                .ragStatus(material.getRagStatus())
-                .createdAt(material.getCreatedAt())
+                .id(m.getId())
+                .chapterId(m.getChapterId())
+                .lecturerId(m.getLecturerId())
+                .lessonId(m.getLessonId())
+                .topicId(m.getTopicId())
+                .title(m.getTitle())
+                .fileName(m.getFileName())
+                .fileSize(m.getFileSize())
+                .fileType(m.getFileType())
+                .gcsUri(m.getGcsUri())
+                .fileUrl(fileUrl)
+                .ragCorpusId(m.getRagCorpusId())
+                .ragStatus(m.getRagStatus())
+                .chunkCount(m.getChunkCount())
+                .errorMessage(m.getErrorMessage())
+                .createdAt(AuditTime.toInstant(m.getCreatedAt()))
                 .build();
     }
 }

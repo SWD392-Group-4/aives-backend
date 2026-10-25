@@ -1,5 +1,6 @@
-﻿package com.aives.modules.content.dto;
+package com.aives.modules.content.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -16,18 +17,21 @@ import lombok.Setter;
 @Builder
 public class DifficultyRatioConfig {
 
-    @NotNull(message = "Tỷ lệ câu Dễ không được để trống")
-    @Min(value = 0, message = "Tỷ lệ câu Dễ tối thiểu 0%")
-    @Max(value = 100, message = "Tỷ lệ câu Dễ tối đa 100%")
+    @Schema(example = "40", description = "Tỷ lệ phần trăm câu hỏi Dễ (0 - 100)")
+    @NotNull(message = "Tỷ lệ câu hỏi Dễ không được để trống")
+    @Min(value = 0, message = "Tỷ lệ câu hỏi Dễ tối thiểu là 0%")
+    @Max(value = 100, message = "Tỷ lệ câu hỏi Dễ tối đa là 100%")
     private Integer easyPercent;
 
-    @NotNull(message = "Tỷ lệ câu Trung bình không được để trống")
-    @Min(value = 0, message = "Tỷ lệ câu Trung bình tối thiểu 0%")
-    @Max(value = 100, message = "Tỷ lệ câu Trung bình tối đa 100%")
+    @Schema(example = "40", description = "Tỷ lệ phần trăm câu hỏi Trung bình (0 - 100)")
+    @NotNull(message = "Tỷ lệ câu hỏi Trung bình không được để trống")
+    @Min(value = 0, message = "Tỷ lệ câu hỏi Trung bình tối thiểu là 0%")
+    @Max(value = 100, message = "Tỷ lệ câu hỏi Trung bình tối đa là 100%")
     private Integer mediumPercent;
 
-    @NotNull(message = "Tỷ lệ câu Khó không được để trống")
-    @Min(value = 0, message = "Tỷ lệ câu Khó tối thiểu 0%")
-    @Max(value = 100, message = "Tỷ lệ câu Khó tối đa 100%")
+    @Schema(example = "20", description = "Tỷ lệ phần trăm câu hỏi Khó (0 - 100)")
+    @NotNull(message = "Tỷ lệ câu hỏi Khó không được để trống")
+    @Min(value = 0, message = "Tỷ lệ câu hỏi Khó tối thiểu là 0%")
+    @Max(value = 100, message = "Tỷ lệ câu hỏi Khó tối đa là 100%")
     private Integer hardPercent;
 }

@@ -20,12 +20,15 @@ public class JwtTokenProvider {
 
     private final SecretKey secretKey;
     private final long accessTokenExpirationMinutes;
+    private final long refreshTokenExpirationDays;
 
     public JwtTokenProvider(
             @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.access-token-expiration-minutes:60}") long accessTokenExpirationMinutes) {
+            @Value("${app.jwt.access-token-expiration-minutes:60}") long accessTokenExpirationMinutes,
+            @Value("${app.jwt.refresh-token-expiration-days:7}") long refreshTokenExpirationDays) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenExpirationMinutes = accessTokenExpirationMinutes;
+        this.refreshTokenExpirationDays = refreshTokenExpirationDays;
     }
 
     public String generateAccessToken(UserPrincipal principal) {
@@ -36,6 +39,22 @@ public class JwtTokenProvider {
                 .subject(principal.getUsername())
                 .claim("uid", principal.getId())
                 .claim("role", principal.getRole().name())
+                .claim("typ", "access")
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(expiresAt))
+                .signWith(secretKey)
+                .compact();
+    }
+
+    public String generateRefreshToken(UserPrincipal principal) {
+        Instant now = Instant.now();
+        Instant expiresAt = now.plus(refreshTokenExpirationDays, ChronoUnit.DAYS);
+        return Jwts.builder()
+                .id(UUID.randomUUID().toString())
+                .subject(principal.getUsername())
+                .claim("uid", principal.getId())
+                .claim("role", principal.getRole().name())
+                .claim("typ", "refresh")
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiresAt))
                 .signWith(secretKey)
@@ -55,6 +74,19 @@ public class JwtTokenProvider {
 
     public long getAccessTokenExpirationSeconds() {
         return accessTokenExpirationMinutes * 60;
+    }
+
+    public long getRefreshTokenExpirationSeconds() {
+        return refreshTokenExpirationDays * 24 * 60 * 60;
+    }
+
+    public boolean isRefreshToken(Claims claims) {
+        return "refresh".equalsIgnoreCase(claims.get("typ", String.class));
+    }
+
+    public boolean isAccessToken(Claims claims) {
+        String typ = claims.get("typ", String.class);
+        return typ == null || "access".equalsIgnoreCase(typ);
     }
 
     /**

@@ -17,10 +17,19 @@ public class MaterialResponse {
 
     private String id;
     private String chapterId;
+    private String lecturerId;
+    private String lessonId;
+    private String lessonTitle;
+    private String topicId;
+    private String topicName;
     private String title;
     private String fileUrl;
     private String fileType;
-    private Long fileSize;
-    private MaterialRagStatus ragStatus;
-    private LocalDateTime createdAt;
+    private String gcsUri;
+    private String fileUrl;
+    private String ragCorpusId;
+    private String ragStatus;
+    private Integer chunkCount;
+    private String errorMessage;
+    private Instant createdAt;
 }

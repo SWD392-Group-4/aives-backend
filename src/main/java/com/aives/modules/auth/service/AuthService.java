@@ -4,8 +4,10 @@ import com.aives.modules.auth.dto.ForgotPasswordRequest;
 import com.aives.modules.auth.dto.GoogleLoginRequest;
 import com.aives.modules.auth.dto.LoginRequest;
 import com.aives.modules.auth.dto.LoginResponse;
+import com.aives.modules.auth.dto.RefreshTokenRequest;
 import com.aives.modules.auth.dto.RegisterRequest;
 import com.aives.modules.auth.dto.ResetPasswordRequest;
+import com.aives.modules.auth.dto.TokenRefreshResponse;
 import com.aives.modules.auth.dto.UserResponse;
 
 public interface AuthService {
@@ -16,7 +18,11 @@ public interface AuthService {
 
     LoginResponse loginWithGoogle(GoogleLoginRequest request);
 
+    TokenRefreshResponse refreshToken(RefreshTokenRequest request);
+
     void logout(String authorizationHeader);
+
+    void logout(String authorizationHeader, RefreshTokenRequest request);
 
     void forgotPassword(ForgotPasswordRequest request);
 
