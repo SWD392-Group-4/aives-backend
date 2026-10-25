@@ -17,6 +17,8 @@ public interface QuestionGradeRepository extends JpaRepository<QuestionGrade, St
             join fetch g.examQuestion eq
             join fetch eq.question q
             left join fetch q.rubric
+            left join fetch q.chapter c
+            left join fetch c.course
             where g.attempt.id = :attemptId
             order by eq.orderNo asc
             """)
@@ -29,6 +31,8 @@ public interface QuestionGradeRepository extends JpaRepository<QuestionGrade, St
             join fetch g.examQuestion eq
             join fetch eq.question q
             left join fetch q.rubric
+            left join fetch q.chapter c
+            left join fetch c.course
             where g.id = :id
             """)
     Optional<QuestionGrade> findWithAttemptById(@Param("id") String id);

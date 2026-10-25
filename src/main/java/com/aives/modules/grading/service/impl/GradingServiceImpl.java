@@ -8,6 +8,8 @@ import com.aives.modules.auth.dto.UserResponse;
 import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.service.UserService;
 import com.aives.modules.content.entity.Question;
+import com.aives.modules.content.entity.Rubric;
+import com.aives.modules.content.repository.RubricRepository;
 import com.aives.modules.exam.entity.VivaAttempt;
 import com.aives.modules.exam.entity.VivaExam;
 import com.aives.modules.exam.enums.AttemptStatus;
@@ -17,6 +19,7 @@ import com.aives.modules.grading.dto.CriteriaGradeResponse;
 import com.aives.modules.grading.dto.GradeExchangeResponse;
 import com.aives.modules.grading.dto.GradingAttemptResponse;
 import com.aives.modules.grading.dto.QuestionGradeResponse;
+import com.aives.modules.grading.dto.SaveQuestionGradeRequest;
 import com.aives.modules.grading.entity.CriteriaGrade;
 import com.aives.modules.grading.entity.QuestionGrade;
 import com.aives.modules.grading.entity.GradeAppeal;
@@ -43,6 +46,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +61,7 @@ public class GradingServiceImpl implements GradingService {
     private final VivaAttemptRepository attemptRepository;
     private final QuestionGradeRepository questionGradeRepository;
     private final CriteriaGradeRepository criteriaGradeRepository;
+    private final RubricRepository rubricRepository;
     private final InterviewExchangeRepository exchangeRepository;
     private final GradeAppealRepository appealRepository;
     private final AttemptGradingService attemptGradingService;
@@ -97,6 +102,16 @@ public class GradingServiceImpl implements GradingService {
     @Transactional
     public QuestionGradeResponse saveQuestionGrade(UserPrincipal actor, String questionGradeId, BigDecimal finalScore,
                                                    String lecturerNote) {
+        return saveQuestionGrade(actor, questionGradeId, SaveQuestionGradeRequest.builder()
+                .finalScore(finalScore)
+                .lecturerNote(lecturerNote)
+                .build());
+    }
+
+    @Override
+    @Transactional
+    public QuestionGradeResponse saveQuestionGrade(UserPrincipal actor, String questionGradeId,
+                                                   SaveQuestionGradeRequest request) {
         QuestionGrade grade = questionGradeRepository.findWithAttemptById(questionGradeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.QUESTION_GRADE_NOT_FOUND));
         VivaAttempt attempt = grade.getAttempt();
@@ -104,12 +119,14 @@ public class GradingServiceImpl implements GradingService {
         requireEditable(attempt);
 
         BigDecimal maxScore = maxScoreOf(grade);
-        BigDecimal score = finalScore.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal score = request.getFinalScore().setScale(2, RoundingMode.HALF_UP);
         if (score.signum() < 0 || score.compareTo(maxScore) > 0) {
             throw new BusinessException(ErrorCode.GRADE_SCORE_INVALID,
                     "Điểm phải nằm trong khoảng 0 đến " + maxScore.stripTrailingZeros().toPlainString());
         }
-        String note = lecturerNote == null || lecturerNote.isBlank() ? null : lecturerNote.trim();
+        String note = request.getLecturerNote() == null || request.getLecturerNote().isBlank()
+                ? null
+                : request.getLecturerNote().trim();
         if (grade.getAiScore() != null
                 && score.subtract(grade.getAiScore()).abs().compareTo(NOTE_REQUIRED_DIFF) > 0
                 && (note == null || note.length() < MIN_NOTE_LENGTH)) {
@@ -122,6 +139,26 @@ public class GradingServiceImpl implements GradingService {
         grade.setGradedBy(actor.getId());
         grade.setGradedAt(now());
         questionGradeRepository.saveAndFlush(grade);
+
+        // Cap nhat diem tung tieu chi neu giang vien co gui
+        if (request.getCriteriaScores() != null && !request.getCriteriaScores().isEmpty()) {
+            List<CriteriaGrade> criteriaGrades = criteriaGradeRepository.findByQuestionGradeIds(List.of(questionGradeId));
+            for (SaveQuestionGradeRequest.CriterionScoreInput input : request.getCriteriaScores()) {
+                if (input.getFinalScore() == null) {
+                    continue;
+                }
+                for (CriteriaGrade cg : criteriaGrades) {
+                    boolean match = (input.getCriteriaGradeId() != null && input.getCriteriaGradeId().equals(cg.getId()))
+                            || (input.getRubricCriteriaId() != null && input.getRubricCriteriaId().equals(cg.getRubricCriterion().getId()));
+                    if (match) {
+                        cg.setFinalScore(input.getFinalScore().setScale(2, RoundingMode.HALF_UP));
+                        criteriaGradeRepository.save(cg);
+                        break;
+                    }
+                }
+            }
+            criteriaGradeRepository.flush();
+        }
 
         // Tong diem chot chi co khi moi cau da duoc chot
         attemptGradingService.refreshTotals(attempt, questionGradeRepository.findByAttemptInOrder(attempt.getId()));
@@ -246,7 +283,20 @@ public class GradingServiceImpl implements GradingService {
 
     private BigDecimal maxScoreOf(QuestionGrade grade) {
         Question question = grade.getExamQuestion().getQuestion();
-        return question.getRubric() == null ? TEN : question.getRubric().getMaxScore();
+        if (question.getRubric() != null) {
+            return question.getRubric().getMaxScore() != null ? question.getRubric().getMaxScore() : TEN;
+        }
+        VivaExam exam = grade.getAttempt() != null ? grade.getAttempt().getExam() : null;
+        String courseId = exam != null ? exam.getCourseId() : null;
+        if (!StringUtils.hasText(courseId) && question.getChapter() != null && question.getChapter().getCourse() != null) {
+            courseId = question.getChapter().getCourse().getId();
+        }
+        if (StringUtils.hasText(courseId)) {
+            return rubricRepository.findByCourse_Id(courseId)
+                    .map(r -> r.getMaxScore() != null ? r.getMaxScore() : TEN)
+                    .orElse(TEN);
+        }
+        return TEN;
     }
 
     private GradingAttemptResponse toAttemptResponse(VivaAttempt attempt, UserResponse student, boolean withScores) {
