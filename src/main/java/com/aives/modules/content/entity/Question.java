@@ -1,9 +1,15 @@
 package com.aives.modules.content.entity;
 
 import com.aives.common.entity.BaseEntity;
+import com.aives.modules.auth.entity.User;
+import com.aives.modules.content.enums.QuestionDifficulty;
+import com.aives.modules.content.enums.QuestionSource;
+import com.aives.modules.content.enums.QuestionStatus;
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -29,19 +35,20 @@ import org.hibernate.annotations.Nationalized;
 public class Question extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "topics_id", referencedColumnName = "topics_id", nullable = false)
-    private Topic topic;
+    @JoinColumn(name = "chapters_id", referencedColumnName = "chapters_id", nullable = false)
+    private Chapter chapter;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "rubrics_id", referencedColumnName = "rubrics_id")
-    private Rubric rubric;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by", referencedColumnName = "users_id", nullable = false)
+    private User createdBy;
 
     @Nationalized
     @Column(name = "content", nullable = false, length = Length.LONG32)
     private String content;
 
-    @Column(name = "bloom_level", nullable = false, length = 20)
-    private String bloomLevel;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "difficulty", nullable = false, length = 20)
+    private QuestionDifficulty difficulty;
 
     @Nationalized
     @Column(name = "model_answer", length = Length.LONG32)
@@ -51,12 +58,14 @@ public class Question extends BaseEntity {
     private String expectedKeywords;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "source", nullable = false, length = 20)
-    private String source = "MANUAL";
+    private QuestionSource source = QuestionSource.MANUAL;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "DRAFT";
+    private QuestionStatus status = QuestionStatus.DRAFT;
 
     @Column(name = "question_audio_key", length = 500)
     private String questionAudioKey;

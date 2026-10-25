@@ -1,11 +1,17 @@
 package com.aives.modules.content.entity;
 
+import com.aives.common.entity.BaseEntity;
+import com.aives.modules.auth.entity.User;
+import com.aives.modules.content.enums.MaterialRagStatus;
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,49 +22,45 @@ import org.hibernate.annotations.Nationalized;
 
 @Entity
 @Table(name = "materials")
+@AttributeOverride(
+        name = "id",
+        column = @Column(name = "materials_id", nullable = false, updatable = false, length = 20))
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Material {
+public class Material extends BaseEntity {
 
-    @Id
-    @Column(name = "id", nullable = false, updatable = false, length = 50)
-    private String id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chapters_id", referencedColumnName = "chapters_id")
+    private Chapter chapter;
 
-    @Column(name = "lecturer_id", nullable = false, length = 50)
-    private String lecturerId;
-
-    @Column(name = "lesson_id", length = 50)
-    private String lessonId;
-
-    @Column(name = "topic_id", length = 50)
-    private String topicId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploaded_by", referencedColumnName = "users_id")
+    private User uploadedBy;
 
     @Nationalized
-    @Column(name = "title", nullable = false, length = 255)
+    @Column(name = "title", nullable = false, length = 200)
     private String title;
 
-    @Column(name = "file_name", nullable = false, length = 255)
-    private String fileName;
-
-    @Column(name = "file_size", nullable = false)
-    private Long fileSize;
+    @Column(name = "file_url", nullable = false, length = 500)
+    private String fileUrl;
 
     @Column(name = "file_type", nullable = false, length = 20)
     private String fileType;
 
-    @Column(name = "gcs_uri", nullable = false, length = 500)
-    private String gcsUri;
+    @Column(name = "file_size", nullable = false)
+    private Long fileSize;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rag_status", nullable = false, length = 20)
+    private MaterialRagStatus ragStatus = MaterialRagStatus.INDEXING;
 
     @Builder.Default
     @Column(name = "rag_corpus_id", length = 100)
     private String ragCorpusId = "6917529027641081856";
-
-    @Builder.Default
-    @Column(name = "rag_status", nullable = false, length = 30)
-    private String ragStatus = "INDEXING";
 
     @Builder.Default
     @Column(name = "chunk_count")
@@ -66,23 +68,4 @@ public class Material {
 
     @Column(name = "error_message", length = Length.LONG32)
     private String errorMessage;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    public void prePersist() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-        if (ragStatus == null) {
-            ragStatus = "INDEXING";
-        }
-        if (chunkCount == null) {
-            chunkCount = 0;
-        }
-        if (ragCorpusId == null) {
-            ragCorpusId = "6917529027641081856";
-        }
-    }
 }

@@ -39,6 +39,9 @@ import org.hibernate.annotations.Nationalized;
 public class VivaExam extends BaseEntity {
 
     // Nguoi tao phien (LECTURER hoac ADMIN). Chi luu id vi User thuoc module auth.
+    @Column(name = "courses_id", length = 20)
+    private String courseId;
+
     @Column(name = "lecturer_id", nullable = false, length = 20)
     private String lecturerId;
 
