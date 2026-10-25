@@ -36,6 +36,12 @@ public class Material {
     @Column(name = "topic_id", length = 50)
     private String topicId;
 
+    @Column(name = "chapters_id", length = 50)
+    private String chapterId;
+
+    @Column(name = "uploaded_by", length = 50)
+    private String uploadedBy;
+
     @Nationalized
     @Column(name = "title", nullable = false, length = 255)
     private String title;

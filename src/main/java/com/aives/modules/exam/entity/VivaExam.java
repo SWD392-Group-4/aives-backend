@@ -42,6 +42,9 @@ public class VivaExam extends BaseEntity {
     @Column(name = "lecturer_id", nullable = false, length = 20)
     private String lecturerId;
 
+    @Column(name = "courses_id", length = 20)
+    private String courseId;
+
     @Nationalized
     @Column(name = "title", nullable = false, length = 200)
     private String title;

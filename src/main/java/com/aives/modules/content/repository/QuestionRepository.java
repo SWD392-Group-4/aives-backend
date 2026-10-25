@@ -54,6 +54,14 @@ public interface QuestionRepository extends JpaRepository<Question, String> {
     // Cau hoi theo trang thai thuoc bai hoc co tieu de cho truoc (dung de cat du lieu mau cu)
     List<Question> findByTopic_Lesson_TitleAndStatus(String lessonTitle, String status);
 
+    List<Question> findByChapter_Id(String chapterId);
+
+    List<Question> findByChapter_IdAndStatus(String chapterId, String status);
+
+    long countByChapter_Id(String chapterId);
+
+    long countByChapter_IdAndStatus(String chapterId, String status);
+
     boolean existsByRubric_Id(String rubricId);
 
     boolean existsByTopic_Id(String topicId);

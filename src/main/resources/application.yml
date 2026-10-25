@@ -15,6 +15,10 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/aives}
+      auto-index-creation: false
   # SMTP de gui email (mat khau tam khi admin tao tai khoan). Chi duoc dung khi app.mail.enabled = true.
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}

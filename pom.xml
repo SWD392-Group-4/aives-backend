@@ -102,6 +102,11 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- MongoDB cho Academic Audit Logging (TASK-011) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
         <!-- Doc file PDF cau hoi: ve trang PDF thanh anh de cat hinh ve (hinh hoc, so do) cua tung cau hoi -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>

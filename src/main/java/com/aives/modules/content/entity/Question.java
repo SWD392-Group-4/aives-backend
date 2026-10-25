@@ -28,9 +28,16 @@ import org.hibernate.annotations.Nationalized;
 @Builder
 public class Question extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "topics_id", referencedColumnName = "topics_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "topics_id", referencedColumnName = "topics_id")
     private Topic topic;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chapters_id", referencedColumnName = "chapters_id")
+    private Chapter chapter;
+
+    @Column(name = "created_by", length = 20)
+    private String createdBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "rubrics_id", referencedColumnName = "rubrics_id")
@@ -40,7 +47,11 @@ public class Question extends BaseEntity {
     @Column(name = "content", nullable = false, length = Length.LONG32)
     private String content;
 
-    @Column(name = "bloom_level", nullable = false, length = 20)
+    @Builder.Default
+    @Column(name = "difficulty", length = 20)
+    private String difficulty = "MEDIUM";
+
+    @Column(name = "bloom_level", length = 20)
     private String bloomLevel;
 
     @Nationalized
