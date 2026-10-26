@@ -81,8 +81,15 @@ public class AuditServiceImpl implements AuditService {
                     cb.equal(cb.upper(root.get("action")), action.trim().toUpperCase(Locale.ROOT)));
         }
         if (StringUtils.hasText(entityName)) {
-            spec = spec.and((root, query, cb) ->
-                    cb.equal(cb.upper(root.get("entityType")), entityName.trim().toUpperCase(Locale.ROOT)));
+            String trimmed = entityName.trim().toUpperCase(Locale.ROOT);
+            spec = spec.and((root, query, cb) -> {
+                var upper = cb.upper(root.get("entityType"));
+                if (trimmed.endsWith("S") && !trimmed.equals("STATUS")) {
+                    String singular = trimmed.substring(0, trimmed.length() - 1);
+                    return cb.or(cb.equal(upper, trimmed), cb.equal(upper, singular));
+                }
+                return cb.or(cb.equal(upper, trimmed), cb.equal(upper, trimmed + "S"));
+            });
         }
 
         Pageable pageable = PageRequest.of(
@@ -108,15 +115,18 @@ public class AuditServiceImpl implements AuditService {
                     return AuditLogResponse.builder()
                             .id(log.getId())
                             .actorId(log.getActorId())
-                            .actorName(actor != null ? actor.getFullName() : null)
+                            .actorName(actor != null ? actor.getFullName() : (log.getActorId() != null ? log.getActorId() : "SYSTEM"))
                             .actorEmail(actor != null ? actor.getEmail() : null)
+                            .actorRole(actor != null && actor.getRole() != null ? actor.getRole().getName() : null)
                             .action(log.getAction())
                             .entityName(log.getEntityType())
+                            .entityType(log.getEntityType())
                             .entityId(log.getEntityId())
                             .oldValue(log.getOldValue())
                             .newValue(log.getNewValue())
                             .ipAddress(log.getIpAddress())
                             .createdAt(log.getCreatedAt())
+                            .timestamp(log.getCreatedAt())
                             .build();
                 })
                 .toList();

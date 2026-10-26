@@ -16,11 +16,13 @@ import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.mapper.UserMapper;
 import com.aives.modules.auth.repository.RoleRepository;
 import com.aives.modules.auth.repository.UserRepository;
+import com.aives.common.security.UserPrincipal;
 import com.aives.modules.auth.service.AccountMailService;
 import com.aives.modules.auth.service.OtpService;
 import com.aives.modules.auth.service.UserService;
 import com.aives.modules.auth.util.TempPasswordGenerator;
 import com.aives.modules.auth.util.UserIdGenerator;
+import com.aives.modules.system.service.AuditService;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -32,6 +34,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +53,7 @@ public class UserServiceImpl implements UserService {
     private final TempPasswordGenerator tempPasswordGenerator;
     private final AccountMailService accountMailService;
     private final OtpService otpService;
+    private final AuditService auditService;
 
     @Override
     @Transactional(readOnly = true)
@@ -140,6 +145,19 @@ public class UserServiceImpl implements UserService {
         User saved = userRepository.saveAndFlush(user);
 
         boolean emailSent = accountMailService.sendAccountCreated(saved, temporaryPassword);
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String actorId = auth != null && auth.getPrincipal() instanceof UserPrincipal p ? p.getId() : "SYSTEM";
+        auditService.log(
+                actorId,
+                "CREATE_USER",
+                "USER",
+                saved.getId(),
+                null,
+                String.format("{\"id\":\"%s\",\"email\":\"%s\",\"fullName\":\"%s\",\"role\":\"%s\"}",
+                        saved.getId(), saved.getEmail(), saved.getFullName(), saved.getRole().getName().name())
+        );
+
         return new CreatedUserResponse(userMapper.toResponse(saved), emailSent);
     }
 
@@ -175,8 +193,20 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.CANNOT_DISABLE_SELF);
         }
         User user = findUser(userId);
+        boolean oldActive = user.isActive();
         user.setActive(active);
-        return userMapper.toResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+
+        auditService.log(
+                currentUserId != null ? currentUserId : "SYSTEM",
+                "UPDATE_STATUS",
+                "USER",
+                userId,
+                oldActive ? "ACTIVE" : "INACTIVE",
+                active ? "ACTIVE" : "INACTIVE"
+        );
+
+        return userMapper.toResponse(saved);
     }
 
     @Override
@@ -185,7 +215,23 @@ public class UserServiceImpl implements UserService {
         if (userId.equals(currentUserId)) {
             throw new BusinessException(ErrorCode.CANNOT_DELETE_SELF);
         }
-        userRepository.delete(findUser(userId));
+        User user = findUser(userId);
+        String oldUserData = String.format("{\"id\":\"%s\",\"email\":\"%s\",\"fullName\":\"%s\",\"role\":\"%s\",\"active\":%b}",
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getRole() != null ? user.getRole().getName().name() : "",
+                user.isActive());
+        userRepository.delete(user);
+
+        auditService.log(
+                currentUserId != null ? currentUserId : "SYSTEM",
+                "DELETE_USER",
+                "USER",
+                userId,
+                oldUserData,
+                null
+        );
     }
 
     private User newUser(String rawEmail, String fullName, RoleName roleName, String rawPassword, boolean mustChangePassword) {

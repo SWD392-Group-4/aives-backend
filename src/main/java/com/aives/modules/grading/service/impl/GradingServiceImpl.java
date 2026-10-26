@@ -29,6 +29,7 @@ import com.aives.modules.grading.repository.GradingAttemptRepository;
 import com.aives.modules.grading.repository.QuestionGradeRepository;
 import com.aives.modules.grading.service.AttemptGradingService;
 import com.aives.modules.grading.service.GradingService;
+import com.aives.modules.system.service.AuditService;
 import com.aives.modules.vivaroom.entity.InterviewExchange;
 import com.aives.modules.vivaroom.repository.InterviewExchangeRepository;
 import java.math.BigDecimal;
@@ -66,6 +67,7 @@ public class GradingServiceImpl implements GradingService {
     private final GradeAppealRepository appealRepository;
     private final AttemptGradingService attemptGradingService;
     private final UserService userService;
+    private final AuditService auditService;
     private final Clock clock;
 
     /* ========================= GIANG VIEN ========================= */
@@ -133,6 +135,9 @@ public class GradingServiceImpl implements GradingService {
             throw new BusinessException(ErrorCode.GRADE_NOTE_REQUIRED);
         }
 
+        BigDecimal previousScore = grade.getFinalScore() != null ? grade.getFinalScore() : grade.getAiScore();
+        String previousStatus = grade.getStatus();
+
         grade.setFinalScore(score);
         grade.setLecturerNote(note);
         grade.setStatus(AttemptGradingService.GRADE_APPROVED);
@@ -164,6 +169,28 @@ public class GradingServiceImpl implements GradingService {
         attemptGradingService.refreshTotals(attempt, questionGradeRepository.findByAttemptInOrder(attempt.getId()));
         attemptRepository.save(attempt);
 
+        String oldValue = String.format("{\"attemptId\":\"%s\",\"studentId\":\"%s\",\"score\":%s,\"status\":\"%s\"}",
+                attempt.getId(),
+                attempt.getStudentId(),
+                previousScore != null ? previousScore.toPlainString() : "null",
+                previousStatus != null ? previousStatus : "AI_GRADED");
+
+        String newValue = String.format("{\"attemptId\":\"%s\",\"studentId\":\"%s\",\"score\":%s,\"lecturerNote\":%s,\"status\":\"%s\"}",
+                attempt.getId(),
+                attempt.getStudentId(),
+                score.toPlainString(),
+                note != null ? "\"" + note.replace("\"", "\\\"") + "\"" : "null",
+                AttemptGradingService.GRADE_APPROVED);
+
+        auditService.log(
+                actor.getId(),
+                "OVERRIDE_SCORE",
+                "question_grades",
+                questionGradeId,
+                oldValue,
+                newValue
+        );
+
         return toGradeResponses(attempt.getId(), true).stream()
                 .filter(item -> item.getId().equals(questionGradeId))
                 .findFirst()
@@ -185,10 +212,35 @@ public class GradingServiceImpl implements GradingService {
                     ? "Lượt thi chưa có điểm câu hỏi nào để công bố"
                     : "Còn " + notApproved + " câu chưa được giảng viên duyệt điểm. Vui lòng duyệt tất cả trước khi công bố");
         }
+        String previousStatus = attempt.getResultStatus();
+        BigDecimal previousTotalScore = attempt.getTotalFinalScore();
+
         attemptGradingService.refreshTotals(attempt, grades);
         attempt.setResultStatus(AttemptGradingService.PUBLISHED);
         attempt.setPublishedAt(now());
         attemptRepository.save(attempt);
+
+        String oldValue = String.format("{\"attemptId\":\"%s\",\"studentId\":\"%s\",\"status\":\"%s\",\"totalScore\":%s}",
+                attempt.getId(),
+                attempt.getStudentId(),
+                previousStatus != null ? previousStatus : "UNPUBLISHED",
+                previousTotalScore != null ? previousTotalScore.toPlainString() : "null");
+
+        String newValue = String.format("{\"attemptId\":\"%s\",\"studentId\":\"%s\",\"status\":\"%s\",\"totalAiScore\":%s,\"totalFinalScore\":%s}",
+                attempt.getId(),
+                attempt.getStudentId(),
+                AttemptGradingService.PUBLISHED,
+                attempt.getTotalAiScore() != null ? attempt.getTotalAiScore().toPlainString() : "null",
+                attempt.getTotalFinalScore() != null ? attempt.getTotalFinalScore().toPlainString() : "null");
+
+        auditService.log(
+                actor.getId(),
+                "PUBLISH_RESULT",
+                "viva_attempts",
+                attemptId,
+                oldValue,
+                newValue
+        );
 
         UserResponse student = userService.getUsersByIds(List.of(attempt.getStudentId())).get(attempt.getStudentId());
         return toAttemptResponse(attempt, student, true);

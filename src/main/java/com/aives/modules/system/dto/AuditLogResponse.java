@@ -28,11 +28,17 @@ public class AuditLogResponse {
     @Schema(description = "Email người thực hiện", example = "admin@aives.edu.vn")
     private String actorEmail;
 
+    @Schema(description = "Vai trò người thực hiện", example = "ADMIN")
+    private com.aives.modules.auth.enums.RoleName actorRole;
+
     @Schema(description = "Hành động thực hiện", example = "OVERRIDE_SCORE")
     private String action;
 
     @Schema(description = "Tên thực thể / bảng bị tác động", example = "question_grades")
     private String entityName;
+
+    @Schema(description = "Loại thực thể bị tác động", example = "question_grades")
+    private String entityType;
 
     @Schema(description = "Mã định danh thực thể bị tác động", example = "QG0192837465")
     private String entityId;
@@ -48,4 +54,7 @@ public class AuditLogResponse {
 
     @Schema(description = "Thời gian ghi nhận thao tác")
     private LocalDateTime createdAt;
+
+    @Schema(description = "Thời gian ghi nhận thao tác (alias timestamp)")
+    private LocalDateTime timestamp;
 }
