@@ -3,36 +3,36 @@ package com.aives.integration.ai;
 import java.util.Map;
 
 /**
- * ============================================================================
- * DESIGN PATTERN: STRATEGY PATTERN
- * VAI TRÒ TRONG PATTERN: <<interface>> Strategy
+ * Strategy Pattern - <<interface>> Strategy
+ *
+ * Cổng giao tiếp chuẩn với mô hình ngôn ngữ lớn (LLM).
+ * Định nghĩa hợp đồng chung cho việc tương tác với các dịch vụ AI trong hệ thống.
  * 
- * GIẢI THÍCH KHI THUYẾT TRÌNH:
- * 1. Đây là Strategy Interface định nghĩa hành vi giao tiếp với AI.
- * 2. Các tầng nghiệp vụ (Context như VivaInterviewService, FollowUpDecisionService)
- *    chỉ phụ thuộc vào interface này, không bị gắn chặt (tight coupling) vào Gemini hay OpenAI.
- * 3. Tuân thủ nguyên lý DIP (Dependency Inversion Principle) và OCP (Open/Closed Principle).
- * ============================================================================
+ * Nguyên lý thiết kế:
+ * - Dependency Inversion Principle (DIP): Các module nghiệp vụ phụ thuộc vào abstraction,
+ *   không phụ thuộc trực tiếp vào SDK hoặc API của bên thứ ba.
+ * - Open/Closed Principle (OCP): Cho phép tích hợp thêm nhà cung cấp AI mới (OpenAI, Anthropic)
+ *   bằng cách thêm class cài đặt mới mà không cần chỉnh sửa mã nguồn nghiệp vụ hiện tại.
  */
 public interface LlmClient {
 
     /** 
-     * Kiểm tra xem AI hiện tại có đang được kích hoạt hay không.
-     * Trả về false nếu chưa cấu hình API key.
+     * Kiểm tra trạng thái sẵn sàng của dịch vụ AI.
+     * @return true nếu đã cấu hình API key hợp lệ, ngược lại false.
      */
     boolean isEnabled();
 
     /**
-     * Gọi model AI và yêu cầu trả về JSON theo schema định sẵn.
+     * Gửi yêu cầu đến mô hình AI và nhận kết quả phản hồi theo cấu trúc JSON định sẵn.
      *
-     * @param request thông tin prompt, system instruction, schema
-     * @return chuỗi JSON do AI trả về
-     * @throws LlmException khi không gọi được hoặc AI trả về lỗi
+     * @param request thông tin prompt, system instruction và cấu trúc dữ liệu mong muốn
+     * @return chuỗi JSON do AI phản hồi theo schema
+     * @throws LlmException khi gặp sự cố mạng hoặc lỗi từ nhà cung cấp dịch vụ
      */
     String generateJson(LlmRequest request);
 
     /** 
-     * Gọi nhanh không kèm file (dùng cho quyết định hỏi xoáy trong lúc thi vấn đáp).
+     * Phương thức tiện ích hỗ trợ gọi AI nhanh cho các tác vụ hỏi đáp đơn lẻ.
      */
     default String generateJson(String systemInstruction, String userPrompt, Map<String, Object> responseSchema) {
         return generateJson(LlmRequest.quick(systemInstruction, userPrompt, responseSchema));

@@ -13,17 +13,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * ============================================================================
- * DESIGN PATTERN: STRATEGY PATTERN
- * VAI TRÒ TRONG PATTERN: Context (Thành phần sử dụng Strategy)
- * 
- * GIẢI THÍCH KHI THUYẾT TRÌNH:
- * 1. Lớp này nhận interface LlmClient thông qua Constructor Injection.
- * 2. Khi sinh viên nộp câu trả lời, lớp này gọi phương thức llmClient.generateJson(...)
- *    để quyết định: HỎI XOÁY TIẾP (FOLLOW_UP) hay CHUYỂN CÂU (NEXT).
- * 3. Nếu Strategy hiện tại là StubLlmClient (hoặc AI bị lỗi), exception sẽ được bắt gọn
- *    và tự động fallback về NEXT, đảm bảo bài thi không bao giờ bị dừng giữa chừng.
- * ============================================================================
+ * Strategy Pattern - Context Component
+ *
+ * Thành phần nghiệp vụ chịu trách nhiệm đưa ra quyết định trong buổi thi vấn đáp:
+ * Đặt câu hỏi xoáy (FOLLOW_UP) hay chuyển sang câu tiếp theo (NEXT).
+ *
+ * Đặc điểm kiến trúc:
+ * - Nhận Strategy interface LlmClient thông qua Constructor Injection.
+ * - Uỷ thác hoàn toàn tác vụ suy luận AI cho LlmClient mà không phụ thuộc vào chi tiết cài đặt.
+ * - Kiểm soát ngoại lệ từ Strategy để đảm bảo tính liên tục của bài thi (Fault Tolerance).
  */
 @Slf4j
 @Component

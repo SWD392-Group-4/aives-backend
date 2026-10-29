@@ -1,17 +1,16 @@
 package com.aives.integration.ai;
 
 /**
- * ============================================================================
- * DESIGN PATTERN: STRATEGY PATTERN
- * VAI TRÒ TRONG PATTERN: ConcreteStrategy (Thuật toán thay thế / Fallback)
- * 
- * GIẢI THÍCH KHI THUYẾT TRÌNH:
- * 1. Đây là Concrete Strategy đại diện cho kịch bản chạy offline hoặc khi chưa có API key.
- * 2. Thay vì làm hệ thống bị crash, StubLlmClient trả về false cho isEnabled()
- *    hoặc ném LlmException được kiểm soát.
- * 3. Tầng nghiệp vụ (Context) sẽ bắt ngoại lệ này và tự động chuyển câu hỏi tiếp theo,
- *    giúp phòng thi vẫn tiếp tục diễn ra bình thường (Graceful Degradation).
- * ============================================================================
+ * Strategy Pattern - ConcreteStrategy (Fallback / Offline Implementation)
+ *
+ * Chiến lược dự phòng khi hệ thống chạy trong môi trường phát triển ngoại tuyến
+ * hoặc chưa được cấu hình GEMINI_API_KEY.
+ *
+ * Đặc điểm kiến trúc:
+ * - Thay vì làm gián đoạn luồng thực thi của toàn hệ thống, lớp này trả về cờ
+ *   trạng thái không khả dụng hoặc ném ngoại lệ có kiểm soát (LlmException).
+ * - Tầng nghiệp vụ (Context) bắt ngoại lệ này để áp dụng cơ chế suy thoái an toàn
+ *   (Graceful Degradation), cho phép bài thi tiếp tục bình thường với bộ câu hỏi mặc định.
  */
 public class StubLlmClient implements LlmClient {
 

@@ -21,16 +21,15 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * ============================================================================
- * DESIGN PATTERN: STRATEGY PATTERN
- * VAI TRÒ TRONG PATTERN: ConcreteStrategy (Chiến lược gọi API thật)
- * 
- * GIẢI THÍCH KHI THUYẾT TRÌNH:
- * 1. Đây là Concrete Strategy thực tế kết nối trực tiếp với Google Gemini qua REST API.
- * 2. Cài đặt đầy đủ các phương thức được định nghĩa trong Strategy interface LlmClient.
- * 3. Tự đóng gói logic xử lý gọi lại (retry), luân chuyển model dự phòng (fallback models)
- *    mà không làm ảnh hưởng đến các tầng nghiệp vụ bên trên.
- * ============================================================================
+ * Strategy Pattern - ConcreteStrategy (Google Gemini Implementation)
+ *
+ * Chiến lược giao tiếp thực tế với Google Gemini API qua giao thức REST.
+ * Cài đặt toàn bộ các thao tác được quy định bởi interface LlmClient.
+ *
+ * Đặc điểm kỹ thuật:
+ * - Tự động đóng gói cơ chế thử lại (Exponential Backoff Retry) khi gặp lỗi tạm thời (429, 503).
+ * - Hỗ trợ luân chuyển linh hoạt giữa model chính và các model dự phòng (Fallback Models).
+ * - Độc lập hoàn toàn với tầng nghiệp vụ, đảm bảo tính đóng gói và an toàn dữ liệu.
  */
 @Slf4j
 public class GeminiLlmClient implements LlmClient {
