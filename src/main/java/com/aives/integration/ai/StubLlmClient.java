@@ -1,8 +1,17 @@
 package com.aives.integration.ai;
 
 /**
- * Dung khi CHUA co GEMINI_API_KEY: khong goi ra ngoai, moi lan goi deu bao loi.
- * Nghiep vu phong van bat loi nay va tu chuyen sang cau hoi tiep theo, nen bai thi van chay duoc.
+ * ============================================================================
+ * DESIGN PATTERN: STRATEGY PATTERN
+ * VAI TRÒ TRONG PATTERN: ConcreteStrategy (Thuật toán thay thế / Fallback)
+ * 
+ * GIẢI THÍCH KHI THUYẾT TRÌNH:
+ * 1. Đây là Concrete Strategy đại diện cho kịch bản chạy offline hoặc khi chưa có API key.
+ * 2. Thay vì làm hệ thống bị crash, StubLlmClient trả về false cho isEnabled()
+ *    hoặc ném LlmException được kiểm soát.
+ * 3. Tầng nghiệp vụ (Context) sẽ bắt ngoại lệ này và tự động chuyển câu hỏi tiếp theo,
+ *    giúp phòng thi vẫn tiếp tục diễn ra bình thường (Graceful Degradation).
+ * ============================================================================
  */
 public class StubLlmClient implements LlmClient {
 

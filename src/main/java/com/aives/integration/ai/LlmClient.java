@@ -3,23 +3,37 @@ package com.aives.integration.ai;
 import java.util.Map;
 
 /**
- * Cong goi mo hinh ngon ngu (LLM). Nghiep vu chi phu thuoc interface nay,
- * doi nha cung cap chi can them 1 class implement.
+ * ============================================================================
+ * DESIGN PATTERN: STRATEGY PATTERN
+ * VAI TRÒ TRONG PATTERN: <<interface>> Strategy
+ * 
+ * GIẢI THÍCH KHI THUYẾT TRÌNH:
+ * 1. Đây là Strategy Interface định nghĩa hành vi giao tiếp với AI.
+ * 2. Các tầng nghiệp vụ (Context như VivaInterviewService, FollowUpDecisionService)
+ *    chỉ phụ thuộc vào interface này, không bị gắn chặt (tight coupling) vào Gemini hay OpenAI.
+ * 3. Tuân thủ nguyên lý DIP (Dependency Inversion Principle) và OCP (Open/Closed Principle).
+ * ============================================================================
  */
 public interface LlmClient {
 
-    /** false = chua cau hinh API key, moi lan goi se nem LlmException. */
+    /** 
+     * Kiểm tra xem AI hiện tại có đang được kích hoạt hay không.
+     * Trả về false nếu chưa cấu hình API key.
+     */
     boolean isEnabled();
 
     /**
-     * Goi model va yeu cau tra ve JSON dung theo schema.
+     * Gọi model AI và yêu cầu trả về JSON theo schema định sẵn.
      *
-     * @return chuoi JSON model tra ve
-     * @throws LlmException khi khong goi duoc hoac model khong tra noi dung
+     * @param request thông tin prompt, system instruction, schema
+     * @return chuỗi JSON do AI trả về
+     * @throws LlmException khi không gọi được hoặc AI trả về lỗi
      */
     String generateJson(LlmRequest request);
 
-    /** Goi nhanh, khong kem file (dung cho quyet dinh hoi xoay trong luc thi). */
+    /** 
+     * Gọi nhanh không kèm file (dùng cho quyết định hỏi xoáy trong lúc thi vấn đáp).
+     */
     default String generateJson(String systemInstruction, String userPrompt, Map<String, Object> responseSchema) {
         return generateJson(LlmRequest.quick(systemInstruction, userPrompt, responseSchema));
     }

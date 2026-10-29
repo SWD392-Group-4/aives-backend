@@ -13,8 +13,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Hoi AI: voi cau tra loi vua roi thi HOI XOAY them hay CHUYEN sang cau hoi tiep theo.
- * Khong bao gio nem loi ra ngoai: AI loi hoac tra ket qua khong hop le thi mac dinh la NEXT de bai thi khong bi ket.
+ * ============================================================================
+ * DESIGN PATTERN: STRATEGY PATTERN
+ * VAI TRÒ TRONG PATTERN: Context (Thành phần sử dụng Strategy)
+ * 
+ * GIẢI THÍCH KHI THUYẾT TRÌNH:
+ * 1. Lớp này nhận interface LlmClient thông qua Constructor Injection.
+ * 2. Khi sinh viên nộp câu trả lời, lớp này gọi phương thức llmClient.generateJson(...)
+ *    để quyết định: HỎI XOÁY TIẾP (FOLLOW_UP) hay CHUYỂN CÂU (NEXT).
+ * 3. Nếu Strategy hiện tại là StubLlmClient (hoặc AI bị lỗi), exception sẽ được bắt gọn
+ *    và tự động fallback về NEXT, đảm bảo bài thi không bao giờ bị dừng giữa chừng.
+ * ============================================================================
  */
 @Slf4j
 @Component

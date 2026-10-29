@@ -21,14 +21,16 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * Goi Gemini qua REST (generateContent), bat model tra JSON theo responseSchema.
- * API key di trong header x-goog-api-key, khong bao gio duoc ghi ra log.
- *
- * Loi tam thoi cua Gemini (429 het luot trong phut, 500 / 502 / 503 / 504 qua tai) duoc xu ly ngay tai day:
- * goi lai model chinh vai lan (cho lau dan), van loi thi thu lan luot cac model du phong.
- * Dut ket noi giua chung (chua nhan duoc tra loi) cung duoc goi lai y nhu vay.
- * Rieng qua thoi gian cho thi KHONG goi lai: moi lan da cho het read-timeout, goi lai chi lam nguoi dung doi lau them.
- * Nho vay moi noi dung AI (hoi xoay, cham diem, doc file) deu duoc huong ma khong phai sua gi.
+ * ============================================================================
+ * DESIGN PATTERN: STRATEGY PATTERN
+ * VAI TRÒ TRONG PATTERN: ConcreteStrategy (Chiến lược gọi API thật)
+ * 
+ * GIẢI THÍCH KHI THUYẾT TRÌNH:
+ * 1. Đây là Concrete Strategy thực tế kết nối trực tiếp với Google Gemini qua REST API.
+ * 2. Cài đặt đầy đủ các phương thức được định nghĩa trong Strategy interface LlmClient.
+ * 3. Tự đóng gói logic xử lý gọi lại (retry), luân chuyển model dự phòng (fallback models)
+ *    mà không làm ảnh hưởng đến các tầng nghiệp vụ bên trên.
+ * ============================================================================
  */
 @Slf4j
 public class GeminiLlmClient implements LlmClient {
