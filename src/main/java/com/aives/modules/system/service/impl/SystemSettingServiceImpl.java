@@ -4,6 +4,7 @@ import com.aives.common.security.UserPrincipal;
 import com.aives.modules.system.dto.SystemSettingResponse;
 import com.aives.modules.system.entity.SystemSetting;
 import com.aives.modules.system.repository.SystemSettingRepository;
+import com.aives.modules.system.service.AuditService;
 import com.aives.modules.system.service.SystemSettingService;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SystemSettingServiceImpl implements SystemSettingService {
 
     private final SystemSettingRepository systemSettingRepository;
+    private final AuditService auditService;
     private final Clock clock;
 
     @Override
@@ -41,6 +43,8 @@ public class SystemSettingServiceImpl implements SystemSettingService {
                         .settingKey(key)
                         .build());
 
+        String oldValue = setting.getSettingValue();
+
         setting.setSettingValue(value);
         if (description != null && !description.isBlank()) {
             setting.setDescription(description);
@@ -50,6 +54,16 @@ public class SystemSettingServiceImpl implements SystemSettingService {
 
         SystemSetting saved = systemSettingRepository.save(setting);
         log.info("Cap nhat cau hinh he thong: key={}, updatedBy={}", key, updaterId);
+
+        auditService.log(
+                updaterId != null ? updaterId : "SYSTEM",
+                "UPDATE_SETTING",
+                "system_settings",
+                key,
+                oldValue,
+                value
+        );
+
         return toResponse(saved);
     }
 

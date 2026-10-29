@@ -17,6 +17,7 @@ import com.aives.modules.grading.repository.GradeAppealRepository;
 import com.aives.modules.grading.repository.QuestionGradeRepository;
 import com.aives.modules.grading.service.AppealService;
 import com.aives.modules.grading.service.AttemptGradingService;
+import com.aives.modules.system.service.AuditService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -46,6 +47,7 @@ public class AppealServiceImpl implements AppealService {
     private final VivaAttemptRepository attemptRepository;
     private final AttemptGradingService attemptGradingService;
     private final UserService userService;
+    private final AuditService auditService;
     private final RandomIdGenerator idGenerator;
     private final Clock clock;
 
@@ -104,6 +106,9 @@ public class AppealServiceImpl implements AppealService {
             throw new BusinessException(ErrorCode.APPEAL_ALREADY_RESOLVED);
         }
 
+        BigDecimal scoreBefore = appeal.getScoreBefore();
+        String previousStatus = appeal.getStatus();
+
         String reply = response.trim();
         if (ACCEPTED.equals(status)) {
             BigDecimal maxScore = maxScoreOf(grade);
@@ -133,6 +138,33 @@ public class AppealServiceImpl implements AppealService {
         appeal.setResolvedBy(actor.getId());
         appeal.setResolvedAt(LocalDateTime.now(clock));
         appealRepository.saveAndFlush(appeal);
+
+        String oldValue = String.format("{\"appealId\":\"%s\",\"attemptId\":\"%s\",\"studentId\":\"%s\",\"questionGradeId\":\"%s\",\"status\":\"%s\",\"score\":%s}",
+                appealId,
+                attempt.getId(),
+                attempt.getStudentId(),
+                grade.getId(),
+                previousStatus,
+                scoreBefore != null ? scoreBefore.toPlainString() : "null");
+
+        String newValue = String.format("{\"appealId\":\"%s\",\"attemptId\":\"%s\",\"studentId\":\"%s\",\"questionGradeId\":\"%s\",\"status\":\"%s\",\"score\":%s,\"response\":%s}",
+                appealId,
+                attempt.getId(),
+                attempt.getStudentId(),
+                grade.getId(),
+                status,
+                appeal.getScoreAfter() != null ? appeal.getScoreAfter().toPlainString() : "null",
+                reply != null ? "\"" + reply.replace("\"", "\\\"") + "\"" : "null");
+
+        auditService.log(
+                actor.getId(),
+                "RESOLVE_APPEAL",
+                "grade_appeals",
+                appealId,
+                oldValue,
+                newValue
+        );
+
         return toResponses(List.of(appeal)).get(0);
     }
 
