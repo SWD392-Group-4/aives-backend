@@ -6,10 +6,12 @@ import com.google.cloud.speech.v1.RecognitionAudio;
 import com.google.cloud.speech.v1.RecognitionConfig;
 import com.google.cloud.speech.v1.RecognizeResponse;
 import com.google.cloud.speech.v1.SpeechClient;
+import com.google.cloud.speech.v1.SpeechContext;
 import com.google.cloud.speech.v1.SpeechRecognitionResult;
 import com.google.cloud.speech.v1.SpeechSettings;
 import com.google.protobuf.ByteString;
 import java.io.IOException;
+import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,23 +36,40 @@ public class GoogleSttClient implements SttClient, AutoCloseable {
 
     @Override
     public String transcribe(byte[] audioBytes) {
+        return transcribe(audioBytes, null);
+    }
+
+    @Override
+    public String transcribe(byte[] audioBytes, List<String> phraseHints) {
         if (audioBytes == null || audioBytes.length == 0) {
             throw new SpeechException(ErrorCode.BAD_REQUEST, "Audio rỗng, không thể chuyển thành văn bản");
         }
 
-        RecognitionConfig config = RecognitionConfig.newBuilder()
+        RecognitionConfig.Builder configBuilder = RecognitionConfig.newBuilder()
                 .setEncoding(RecognitionConfig.AudioEncoding.WEBM_OPUS)
                 .setSampleRateHertz(properties.getSampleRateHertz())
                 .setLanguageCode(properties.getLanguageCode())
-                .setEnableAutomaticPunctuation(true)
-                .build();
+                .setEnableAutomaticPunctuation(true);
+
+        if (phraseHints != null && !phraseHints.isEmpty()) {
+            List<String> validPhrases = phraseHints.stream()
+                    .filter(phrase -> phrase != null && !phrase.isBlank())
+                    .map(String::trim)
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!validPhrases.isEmpty()) {
+                configBuilder.addSpeechContexts(SpeechContext.newBuilder()
+                        .addAllPhrases(validPhrases)
+                        .build());
+            }
+        }
 
         RecognitionAudio audio = RecognitionAudio.newBuilder()
                 .setContent(ByteString.copyFrom(audioBytes))
                 .build();
 
         try {
-            RecognizeResponse response = speechClient.recognize(config, audio);
+            RecognizeResponse response = speechClient.recognize(configBuilder.build(), audio);
             return response.getResultsList().stream()
                     .map(this::bestTranscript)
                     .collect(Collectors.joining(" "))

@@ -23,6 +23,12 @@ public interface VivaInterviewService {
      */
     String currentQuestionText(String attemptId, String studentId, String exchangeId);
 
+    /**
+     * Danh sach tu khoa goi y theo boi canh cau hoi hien tai (expectedKeywords, tieu chi Rubric, ten Topic)
+     * giup bo loc Google Cloud Speech-to-Text nhan dang chinh xac hon cac thuat ngu ky thuat (BR-VIVA-004).
+     */
+    List<String> getQuestionSpeechHints(String attemptId, String studentId, String exchangeId);
+
     /** Toan bo luot hoi - dap cua 1 luot thi, cho nguoi tao phien hoac admin xem lai. */
     List<InterviewExchangeResponse> listExchanges(String attemptId, UserPrincipal actor);
 }

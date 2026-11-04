@@ -33,6 +33,8 @@ import com.aives.modules.vivaroom.service.FollowUpDecisionService.Criterion;
 import com.aives.modules.vivaroom.service.FollowUpDecisionService.Decision;
 import com.aives.modules.vivaroom.service.FollowUpDecisionService.Turn;
 import com.aives.modules.vivaroom.service.VivaInterviewService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -42,8 +44,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -89,6 +93,7 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
     private final RandomIdGenerator idGenerator;
     private final TransactionTemplate transactionTemplate;
     private final Clock clock;
+    private final ObjectMapper objectMapper;
 
     // Phien thi chua duoc gan cau hoi thi tu lay bay nhieu cau APPROVED trong ngan hang (giai phap tam)
     @Value("${app.viva.default-question-count:3}")
@@ -223,9 +228,6 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
         });
     }
 
-    /* ========================= NOI BO ========================= */
-
-    /** Du lieu cua 1 luot thi tai 1 thoi diem. Chi dung trong transaction. */
     /* ========================= GIONG NOI (STT / TTS) ========================= */
 
     @Override
@@ -234,6 +236,85 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
         return transactionTemplate.execute(status -> requireCurrent(load(attemptId), exchangeId).getQuestionText());
     }
 
+    @Override
+    public List<String> getQuestionSpeechHints(String attemptId, String studentId, String exchangeId) {
+        requireRunning(attemptId, studentId);
+        return transactionTemplate.execute(status -> {
+            Snapshot snapshot = load(attemptId);
+            InterviewExchange current = requireCurrent(snapshot, exchangeId);
+            Question question = current.getExamQuestion().getQuestion();
+
+            Set<String> hints = new LinkedHashSet<>();
+
+            // 1. Expected keywords tu Question
+            for (String keyword : parseExpectedKeywords(question.getExpectedKeywords())) {
+                if (StringUtils.hasText(keyword)) {
+                    hints.add(keyword.trim());
+                }
+            }
+
+            // 2. Ten cac tieu chi RubricCriterion
+            if (question.getRubric() != null) {
+                criterionRepository.findByRubric_IdOrderByOrderNoAsc(question.getRubric().getId())
+                        .forEach(item -> {
+                            if (StringUtils.hasText(item.getName())) {
+                                hints.add(item.getName().trim());
+                            }
+                        });
+            } else {
+                String courseId = snapshot.attempt().getExam().getCourseId();
+                if (!StringUtils.hasText(courseId) && question.getChapter() != null && question.getChapter().getCourse() != null) {
+                    courseId = question.getChapter().getCourse().getId();
+                }
+                if (StringUtils.hasText(courseId)) {
+                    rubricRepository.findByCourse_Id(courseId).ifPresent(courseRubric -> {
+                        criterionRepository.findByRubric_IdOrderByOrderNoAsc(courseRubric.getId())
+                                .forEach(item -> {
+                                    if (StringUtils.hasText(item.getName())) {
+                                        hints.add(item.getName().trim());
+                                    }
+                                });
+                    });
+                }
+            }
+
+            // 3. Ten Topic
+            if (question.getTopic() != null && StringUtils.hasText(question.getTopic().getName())) {
+                hints.add(question.getTopic().getName().trim());
+            }
+
+            // Loai bo trung lap va gioi han 50 tu khoa
+            return hints.stream()
+                    .filter(StringUtils::hasText)
+                    .limit(50)
+                    .toList();
+        });
+    }
+
+    private List<String> parseExpectedKeywords(String stored) {
+        if (!StringUtils.hasText(stored)) {
+            return Collections.emptyList();
+        }
+        String trimmed = stored.trim();
+        if (trimmed.startsWith("[")) {
+            try {
+                return objectMapper.readValue(trimmed, new TypeReference<List<String>>() {});
+            } catch (Exception ignored) {
+                // Fallback tach theo dau phay neu parse JSON that bai
+            }
+        }
+        List<String> keywords = new ArrayList<>();
+        for (String part : trimmed.split(",")) {
+            if (StringUtils.hasText(part)) {
+                keywords.add(part.trim());
+            }
+        }
+        return keywords;
+    }
+
+    /* ========================= NOI BO ========================= */
+
+    /** Du lieu cua 1 luot thi tai 1 thoi diem. Chi dung trong transaction. */
     private record Snapshot(VivaAttempt attempt, List<VivaExamQuestion> questions, List<InterviewExchange> exchanges) {
 
         InterviewExchange latest() {
@@ -394,7 +475,7 @@ public class VivaInterviewServiceImpl implements VivaInterviewService {
     }
 
     private InterviewExchange createExchange(VivaAttempt attempt, VivaExamQuestion examQuestion,
-                                             InterviewExchange parent, String followUpQuestion) {
+                                              InterviewExchange parent, String followUpQuestion) {
         InterviewExchange exchange = InterviewExchange.builder()
                 .attempt(attempt)
                 .examQuestion(examQuestion)

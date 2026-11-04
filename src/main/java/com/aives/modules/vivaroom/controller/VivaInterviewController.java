@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -64,9 +65,10 @@ public class VivaInterviewController {
             @RequestParam("exchangeId") String exchangeId,
             @RequestParam("file") MultipartFile file,
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) throws IOException {
-        // Kiem tra dung cau dang cho tra loi TRUOC khi goi Google, tranh ton luot STT cho request sai
-        interviewService.currentQuestionText(attemptId, principal.getId(), exchangeId);
-        String transcript = sttClient.transcribe(file.getBytes());
+        // Lay tu khoa goi y theo boi canh cau hoi / tieu chi / topic de tang do chinh xac cua STT (BR-VIVA-004)
+        // Dong thoi xac thuc dung cau hoi dang cho tra loi truoc khi goi STT
+        List<String> phraseHints = interviewService.getQuestionSpeechHints(attemptId, principal.getId(), exchangeId);
+        String transcript = sttClient.transcribe(file.getBytes(), phraseHints);
         return ApiResponse.ok(withSpeechFlags(interviewService.answer(
                 attemptId, principal.getId(), exchangeId, transcript)));
     }
