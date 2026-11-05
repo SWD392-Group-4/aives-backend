@@ -91,6 +91,9 @@ public class CourseRubricServiceImpl implements CourseRubricService {
             rubric.setName(request.getName().trim());
             rubric.setDescription(request.getDescription());
         }
+        // Sua rubric thi phai duyet lai
+        rubric.setApprovedAt(null);
+        rubric.setApprovedBy(null);
 
         Rubric savedRubric = rubricRepository.save(rubric);
 
@@ -145,7 +148,7 @@ public class CourseRubricServiceImpl implements CourseRubricService {
     @Transactional(readOnly = true)
     public boolean isRubricReadyForGrading(String courseId) {
         Rubric rubric = rubricRepository.findByCourse_Id(courseId).orElse(null);
-        if (rubric == null) {
+        if (rubric == null || rubric.getApprovedAt() == null) {
             return false;
         }
         List<RubricCriterion> criteria = rubricCriterionRepository.findByRubric_IdOrderByOrderNoAsc(rubric.getId());
@@ -159,6 +162,35 @@ public class CourseRubricServiceImpl implements CourseRubricService {
             }
         }
         return sum.subtract(TARGET_WEIGHT).abs().compareTo(WEIGHT_TOLERANCE) <= 0;
+    }
+
+    @Override
+    @Transactional
+    public CourseRubricResponse approveRubric(String courseId, UserPrincipal principal) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COURSE_NOT_FOUND, "Không tìm thấy môn học: " + courseId));
+        Rubric rubric = rubricRepository.findByCourse_Id(course.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.RUBRIC_NOT_FOUND, "Môn học chưa có Rubric, hãy tạo và lưu Rubric trước"));
+
+        List<RubricCriterion> criteria = rubricCriterionRepository.findByRubric_IdOrderByOrderNoAsc(rubric.getId());
+        BigDecimal sum = BigDecimal.ZERO;
+        for (RubricCriterion c : criteria) {
+            if (c.getWeightPercent() != null) {
+                sum = sum.add(c.getWeightPercent());
+            }
+        }
+        if (criteria.isEmpty() || sum.subtract(TARGET_WEIGHT).abs().compareTo(WEIGHT_TOLERANCE) > 0) {
+            throw new BusinessException(ErrorCode.RUBRIC_WEIGHT_INVALID,
+                    "Chỉ duyệt được Rubric có tổng trọng số đúng 100% (hiện tại " + sum + "%)");
+        }
+
+        if (rubric.getApprovedAt() == null) {
+            rubric.setApprovedAt(LocalDateTime.now());
+            rubric.setApprovedBy(principal != null ? principal.getId() : null);
+            rubric = rubricRepository.save(rubric);
+            log.info("Approved rubric: id={}, courseId={}", rubric.getId(), courseId);
+        }
+        return toCourseRubricResponse(rubric, course.getId(), isCourseRubricLocked(course.getId(), rubric), criteria);
     }
 
     private boolean isCourseRubricLocked(String courseId, Rubric rubric) {
@@ -207,6 +239,8 @@ public class CourseRubricServiceImpl implements CourseRubricService {
                 .maxScore(rubric.getMaxScore())
                 .isLocked(isLocked)
                 .criteria(criteriaDtos)
+                .approved(rubric.getApprovedAt() != null)
+                .approvedAt(AuditTime.toInstant(rubric.getApprovedAt()))
                 .createdAt(AuditTime.toInstant(rubric.getCreatedAt()))
                 .updatedAt(AuditTime.toInstant(rubric.getUpdatedAt()))
                 .build();

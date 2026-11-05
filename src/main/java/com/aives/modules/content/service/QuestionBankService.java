@@ -12,6 +12,10 @@ public interface QuestionBankService {
     PageResponse<QuestionResponse> getQuestions(
             String chapterId, String status, String difficulty, Pageable pageable);
 
+    /** Cau hoi cua ca mon (loc them theo chuong / trang thai / do kho). */
+    PageResponse<QuestionResponse> getCourseQuestions(
+            String courseId, String chapterId, String status, String difficulty, Pageable pageable);
+
     QuestionResponse createManualQuestion(
             String chapterId, CreateChapterQuestionRequest request, UserPrincipal principal);
 

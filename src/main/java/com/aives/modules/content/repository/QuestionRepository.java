@@ -68,6 +68,8 @@ public interface QuestionRepository extends JpaRepository<Question, String>, Jpa
 
     long countByChapter_Id(String chapterId);
 
+    long countByChapter_Course_Id(String courseId);
+
     long countByChapter_IdAndStatus(String chapterId, String status);
 
     long countByChapter_Course_IdAndStatus(String courseId, String status);

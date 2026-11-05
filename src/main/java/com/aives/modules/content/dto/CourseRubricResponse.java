@@ -38,6 +38,12 @@ public class CourseRubricResponse {
     @Schema(description = "Danh sách tiêu chí con")
     private List<RubricCriteriaDto> criteria;
 
+    @Schema(description = "Rubric đã được giảng viên duyệt chưa (chưa duyệt thì chưa sinh / duyệt câu hỏi được)")
+    private Boolean approved;
+
+    @Schema(description = "Thời điểm duyệt rubric")
+    private Instant approvedAt;
+
     private Instant createdAt;
     private Instant updatedAt;
 }

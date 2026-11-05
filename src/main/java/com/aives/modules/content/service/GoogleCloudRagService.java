@@ -906,21 +906,21 @@ public class GoogleCloudRagService {
 
     private Map<String, Object> buildGenerationResponseSchema() {
         return Map.of(
-                "type", "object",
+                "type", "OBJECT",
                 "properties", Map.of(
                         "rubric", Map.of(
-                                "type", "object",
+                                "type", "OBJECT",
                                 "properties", Map.of(
-                                        "name", Map.of("type", "string"),
-                                        "description", Map.of("type", "string"),
+                                        "name", Map.of("type", "STRING"),
+                                        "description", Map.of("type", "STRING"),
                                         "criteria", Map.of(
-                                                "type", "array",
+                                                "type", "ARRAY",
                                                 "items", Map.of(
-                                                        "type", "object",
+                                                        "type", "OBJECT",
                                                         "properties", Map.of(
-                                                                "name", Map.of("type", "string"),
-                                                                "description", Map.of("type", "string"),
-                                                                "weightPercent", Map.of("type", "number")
+                                                                "name", Map.of("type", "STRING"),
+                                                                "description", Map.of("type", "STRING"),
+                                                                "weightPercent", Map.of("type", "NUMBER")
                                                         ),
                                                         "required", List.of("name", "description", "weightPercent")
                                                 )
@@ -929,14 +929,14 @@ public class GoogleCloudRagService {
                                 "required", List.of("name", "criteria")
                         ),
                         "questions", Map.of(
-                                "type", "array",
+                                "type", "ARRAY",
                                 "items", Map.of(
-                                        "type", "object",
+                                        "type", "OBJECT",
                                         "properties", Map.of(
-                                                "content", Map.of("type", "string"),
-                                                "bloomLevel", Map.of("type", "string"),
-                                                "modelAnswer", Map.of("type", "string"),
-                                                "expectedKeywords", Map.of("type", "array", "items", Map.of("type", "string"))
+                                                "content", Map.of("type", "STRING"),
+                                                "bloomLevel", Map.of("type", "STRING"),
+                                                "modelAnswer", Map.of("type", "STRING"),
+                                                "expectedKeywords", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))
                                         ),
                                         "required", List.of("content", "bloomLevel", "modelAnswer")
                                 )

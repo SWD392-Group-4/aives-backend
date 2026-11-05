@@ -201,7 +201,7 @@ public class ContentImportServiceImpl implements ContentImportService {
                 if (!startsWith(fileBytes, "%PDF")) {
                     throw new BusinessException(ErrorCode.IMPORT_FILE_INVALID, "File không phải PDF hợp lệ");
                 }
-                // Gemini doc truc tiep file PDF (ca chu lan bang bieu), khong can thu vien doc PDF
+                // AI doc truc tiep file PDF (ca chu lan bang bieu), khong can thu vien doc PDF
                 return LlmRequest.longRunning(systemInstruction, prompt, schema)
                         .withAttachment("application/pdf", fileBytes)
                         .forDocumentExtraction();

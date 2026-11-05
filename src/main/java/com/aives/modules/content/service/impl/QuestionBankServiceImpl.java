@@ -46,6 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class QuestionBankServiceImpl implements QuestionBankService {
 
     private final ChapterRepository chapterRepository;
+    private final com.aives.modules.content.repository.CourseRepository courseRepository;
     private final QuestionRepository questionRepository;
     private final QuestionFigureRepository questionFigureRepository;
     private final RubricRepository rubricRepository;
@@ -77,7 +78,35 @@ public class QuestionBankServiceImpl implements QuestionBankService {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        Page<Question> page = questionRepository.findAll(spec, pageable);
+        return toPage(questionRepository.findAll(spec, pageable));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<QuestionResponse> getCourseQuestions(
+            String courseId, String chapterId, String status, String difficulty, Pageable pageable) {
+        if (!courseRepository.existsById(courseId)) {
+            throw new BusinessException(ErrorCode.COURSE_NOT_FOUND, "Không tìm thấy môn học: " + courseId);
+        }
+
+        Specification<Question> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(root.get("chapter").get("course").get("id"), courseId));
+            if (chapterId != null && !chapterId.isBlank()) {
+                predicates.add(cb.equal(root.get("chapter").get("id"), chapterId));
+            }
+            if (status != null && !status.isBlank()) {
+                predicates.add(cb.equal(cb.upper(root.get("status")), status.trim().toUpperCase()));
+            }
+            if (difficulty != null && !difficulty.isBlank()) {
+                predicates.add(cb.equal(cb.upper(root.get("difficulty")), difficulty.trim().toUpperCase()));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return toPage(questionRepository.findAll(spec, pageable));
+    }
+
+    private PageResponse<QuestionResponse> toPage(Page<Question> page) {
         List<String> questionIds = page.getContent().stream().map(Question::getId).toList();
         Set<String> figureIds = questionIds.isEmpty()
                 ? Set.of()
@@ -229,7 +258,7 @@ public class QuestionBankServiceImpl implements QuestionBankService {
         // BR-BANK-001: Môn học bắt buộc phải có Rubric 100% hợp lệ trước khi duyệt câu hỏi
         if (!courseRubricService.isRubricReadyForGrading(courseId)) {
             throw new BusinessException(ErrorCode.COURSE_RUBRIC_REQUIRED,
-                    "Môn học bắt buộc phải có Rubric hoàn chỉnh đạt tổng trọng số 100% trước khi duyệt câu hỏi (BR-BANK-001)");
+                    "Rubric của môn học phải đủ 100% và đã được duyệt trước khi duyệt câu hỏi (BR-BANK-001)");
         }
 
         question.setStatus(QuestionStatus.APPROVED.name());

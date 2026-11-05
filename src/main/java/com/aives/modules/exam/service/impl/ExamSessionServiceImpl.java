@@ -577,7 +577,7 @@ public class ExamSessionServiceImpl implements ExamSessionService {
 
         if (!courseRubricService.isRubricReadyForGrading(course.getId())) {
             throw new BusinessException(ErrorCode.COURSE_RUBRIC_REQUIRED,
-                    "Môn học bắt buộc phải có Rubric hoàn chỉnh (tổng trọng số 100%) trước khi mở ca thi");
+                    "Rubric của môn học phải đủ 100% và đã được duyệt trước khi mở ca thi");
         }
 
         if (request.getQuestionIds() != null && !request.getQuestionIds().isEmpty()) {
@@ -635,7 +635,11 @@ public class ExamSessionServiceImpl implements ExamSessionService {
                     "Môn học chỉ có " + approvedCount + " câu hỏi đã duyệt, chưa đủ " + needed
                             + " câu cho phiên thi. Hãy duyệt thêm câu hỏi hoặc giảm số câu hỏi");
         }
-        return null;
+        // Khong chon chuong: boc ngau nhien tu tat ca cac chuong cua mon
+        List<String> allChapterIds = chapterRepository.findByCourse_IdOrderByOrderNoAsc(courseId).stream()
+                .map(Chapter::getId)
+                .toList();
+        return pickRandomFromChapters(allChapterIds, needed);
     }
 
     private List<Question> pickRandomFromChapters(Collection<String> chapterIds, int count) {

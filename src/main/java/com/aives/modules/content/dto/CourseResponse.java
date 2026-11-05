@@ -26,4 +26,7 @@ public class CourseResponse {
 
     @Schema(example = "Môn học Kiến trúc và Thiết kế Phần mềm")
     private String description;
+
+    @Schema(example = "4", description = "Số chương của môn học")
+    private Integer chapterCount;
 }

@@ -22,5 +22,8 @@ public interface VivaExamRepository extends JpaRepository<VivaExam, String>, Jpa
 
     @Query("select count(e) > 0 from VivaExam e where e.courseId = :courseId and e.cancelledAt is null and e.startAt <= :now")
     boolean hasStartedExamsForCourse(@Param("courseId") String courseId, @Param("now") LocalDateTime now);
+
+    // Mon hoc da duoc dung cho phien thi nao chua (ke ca phien da huy) -> khong cho xoa mon
+    boolean existsByCourseId(String courseId);
 }
 

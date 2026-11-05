@@ -4,6 +4,7 @@ import com.aives.common.dto.ApiResponse;
 import com.aives.common.dto.PageResponse;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.content.dto.CreateChapterQuestionRequest;
+import com.aives.modules.content.dto.GenerateCourseQuestionsRequest;
 import com.aives.modules.content.dto.GenerateQuestionsRequest;
 import com.aives.modules.content.dto.QuestionResponse;
 import com.aives.modules.content.dto.RejectQuestionRequest;
@@ -53,6 +54,30 @@ public class QuestionBankController {
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
         List<QuestionResponse> questions = ragQuestionGenerationService.generateQuestions(chapterId, request, principal);
         return ApiResponse.ok("Sinh câu hỏi thành công (trạng thái DRAFT)", questions);
+    }
+
+    @Operation(summary = "Sinh ngân hàng câu hỏi cho cả môn: chọn chương + số câu mỗi chương (Rubric môn phải được duyệt trước)")
+    @PostMapping("/courses/{courseId}/questions/generate")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<List<QuestionResponse>> generateCourseQuestions(
+            @PathVariable String courseId,
+            @Valid @RequestBody GenerateCourseQuestionsRequest request,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        List<QuestionResponse> questions = ragQuestionGenerationService.generateCourseQuestions(courseId, request, principal);
+        return ApiResponse.ok("Đã sinh " + questions.size() + " câu hỏi (trạng thái DRAFT)", questions);
+    }
+
+    @Operation(summary = "Ngân hàng câu hỏi của cả môn, lọc theo chương / trạng thái / độ khó")
+    @GetMapping("/courses/{courseId}/questions")
+    public ApiResponse<PageResponse<QuestionResponse>> getCourseQuestions(
+            @PathVariable String courseId,
+            @RequestParam(required = false) String chapterId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String difficulty,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "200") int size) {
+        Pageable pageable = PageRequest.of(page, Math.min(Math.max(size, 1), 500), Sort.by(Sort.Direction.DESC, "createdAt"));
+        return ApiResponse.ok(questionBankService.getCourseQuestions(courseId, chapterId, status, difficulty, pageable));
     }
 
     @Operation(summary = "Lấy danh sách câu hỏi trong ngân hàng dùng chung của chương (BR-BANK-005)")

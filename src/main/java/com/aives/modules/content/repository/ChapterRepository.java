@@ -9,4 +9,5 @@ import org.springframework.stereotype.Repository;
 public interface ChapterRepository extends JpaRepository<Chapter, String> {
     List<Chapter> findByCourse_IdOrderByOrderNoAsc(String courseId);
     boolean existsByCourse_Id(String courseId);
+    long countByCourse_Id(String courseId);
 }

@@ -23,3 +23,7 @@ application-local.properties
 
 ### Qodo plugin ###
 .qodo/
+
+### File hoc lieu luu local + key Google Cloud ###
+uploads/
+rag-key.json

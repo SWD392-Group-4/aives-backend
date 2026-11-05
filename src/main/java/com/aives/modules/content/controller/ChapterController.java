@@ -3,6 +3,7 @@ package com.aives.modules.content.controller;
 import com.aives.common.dto.ApiResponse;
 import com.aives.modules.content.dto.ChapterResponse;
 import com.aives.modules.content.dto.CreateChapterRequest;
+import com.aives.modules.content.dto.UpdateChapterRequest;
 import com.aives.modules.content.service.ChapterService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,9 +12,11 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -43,5 +46,23 @@ public class ChapterController {
             @Valid @RequestBody CreateChapterRequest request) {
         ChapterResponse response = chapterService.createChapter(courseId, request);
         return ApiResponse.ok("Tạo chương mới thành công", response);
+    }
+
+    @Operation(summary = "Cập nhật chương")
+    @PutMapping("/{courseId}/chapters/{chapterId}")
+    public ApiResponse<ChapterResponse> updateChapter(
+            @PathVariable String courseId,
+            @PathVariable String chapterId,
+            @Valid @RequestBody UpdateChapterRequest request) {
+        return ApiResponse.ok("Cập nhật chương thành công", chapterService.updateChapter(courseId, chapterId, request));
+    }
+
+    @Operation(summary = "Xoá chương (chỉ khi chương chưa có tài liệu và câu hỏi)")
+    @DeleteMapping("/{courseId}/chapters/{chapterId}")
+    public ApiResponse<Void> deleteChapter(
+            @PathVariable String courseId,
+            @PathVariable String chapterId) {
+        chapterService.deleteChapter(courseId, chapterId);
+        return ApiResponse.ok("Xoá chương thành công", null);
     }
 }

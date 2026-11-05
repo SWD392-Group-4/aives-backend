@@ -12,4 +12,5 @@ public interface CourseLecturerRepository extends JpaRepository<CourseLecturer, 
     List<CourseLecturer> findByUserId(String userId);
     Optional<CourseLecturer> findByCourse_IdAndUserId(String courseId, String userId);
     boolean existsByCourse_IdAndUserId(String courseId, String userId);
+    void deleteByCourse_Id(String courseId);
 }

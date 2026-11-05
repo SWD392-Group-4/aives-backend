@@ -1,5 +1,13 @@
 package com.aives.modules.content.controller;
 
+import com.aives.common.exception.BusinessException;
+import com.aives.common.exception.ErrorCode;
+import com.aives.modules.content.repository.CourseRepository;
+import com.aives.modules.content.service.RubricFileExtractor;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import com.aives.common.dto.ApiResponse;
 import com.aives.common.security.UserPrincipal;
 import com.aives.modules.content.dto.CourseRubricResponse;
@@ -27,6 +35,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class CourseRubricController {
 
     private final CourseRubricService courseRubricService;
+    private final RubricFileExtractor rubricFileExtractor;
+    private final CourseRepository courseRepository;
 
     @Operation(summary = "Lấy Rubric chuẩn duy nhất của môn học")
     @GetMapping("/{courseId}/rubric")
@@ -43,5 +53,25 @@ public class CourseRubricController {
             @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
         CourseRubricResponse response = courseRubricService.updateRubric(courseId, request, principal);
         return ApiResponse.ok("Cập nhật Rubric chuẩn của môn học thành công", response);
+    }
+
+    @Operation(summary = "Duyệt Rubric của môn học (tổng trọng số phải đúng 100%). Duyệt xong mới sinh / duyệt câu hỏi được")
+    @PostMapping("/{courseId}/rubric/approve")
+    public ApiResponse<CourseRubricResponse> approveCourseRubric(
+            @PathVariable String courseId,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        return ApiResponse.ok("Đã duyệt Rubric của môn học", courseRubricService.approveRubric(courseId, principal));
+    }
+
+    @Operation(summary = "AI đọc file tiêu chí (PDF / DOCX / PPTX / TXT) và trả về bản nháp Rubric (chưa lưu)")
+    @PostMapping(value = "/{courseId}/rubric/extract", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UpdateCourseRubricRequest> extractRubricFromFile(
+            @PathVariable String courseId,
+            @RequestParam("file") MultipartFile file) {
+        if (!courseRepository.existsById(courseId)) {
+            throw new BusinessException(ErrorCode.COURSE_NOT_FOUND, "Không tìm thấy môn học: " + courseId);
+        }
+        return ApiResponse.ok("AI đã đọc file rubric, hãy kiểm tra lại trước khi lưu",
+                rubricFileExtractor.extract(file));
     }
 }
