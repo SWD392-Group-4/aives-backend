@@ -12,4 +12,6 @@ public interface MaterialService {
     MaterialResponse uploadMaterial(String chapterId, MultipartFile file, UserPrincipal principal);
 
     MaterialResponse reindexMaterial(String materialId, UserPrincipal principal);
+
+    void deleteMaterial(String materialId, UserPrincipal principal);
 }

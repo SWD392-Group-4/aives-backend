@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,7 +50,16 @@ public class MaterialController {
         return ApiResponse.ok("Tải lên học liệu thành công, đang lập chỉ mục RAG", response);
     }
 
-    @Operation(summary = "Kích hoạt lại tiến trình lập chỉ mục RAG cho tài liệu bị lỗi")
+    @Operation(summary = "Xoá tài liệu khỏi chương")
+    @DeleteMapping("/materials/{materialId}")
+    public ApiResponse<Void> deleteMaterial(
+            @PathVariable String materialId,
+            @Parameter(hidden = true) @AuthenticationPrincipal UserPrincipal principal) {
+        materialService.deleteMaterial(materialId, principal);
+        return ApiResponse.ok("Đã xoá tài liệu", null);
+    }
+
+    @Operation(summary = "Đọc lại nội dung tài liệu bị lỗi")
     @PostMapping("/materials/{materialId}/reindex")
     public ApiResponse<MaterialResponse> reindexMaterial(
             @PathVariable String materialId,

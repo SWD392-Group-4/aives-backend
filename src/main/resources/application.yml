@@ -56,28 +56,20 @@ app:
     from: ${MAIL_FROM:${MAIL_USERNAME:no-reply@aives.local}}
     from-name: AIVES
   ai:
-    gemini:
-      api-key: ${GEMINI_API_KEY:}
-      model: ${GEMINI_MODEL:gemini-3.8-flash}
-      # Model du phong (cach nhau bang dau phay), dung khi model chinh qua tai (HTTP 503) hoac het luot (429)
-      # du da goi lai. De trong (GEMINI_FALLBACK_MODELS=) = khong dung model du phong.
-      # Khong dung gemini-3.7-flash: deprecated tu 08/10/2026, Google tu chuyen sang 3.8 nen du phong vo tac dung.
-      fallback-models: ${GEMINI_FALLBACK_MODELS:gemini-3.6-flash,gemini-3.5-flash-lite}
-      # Model rieng cho viec DOC FILE cau hoi / rubric (chi tach du lieu): Flash-Lite nhanh hon nhieu.
-      # De trong (GEMINI_IMPORT_MODEL=) = dung model chinh. Loi tam thoi thi tu chuyen sang model chinh.
-      import-model: ${GEMINI_IMPORT_MODEL:gemini-3.5-flash-lite}
-      # So lan goi lai model chinh khi loi tam thoi: viec nang (cham diem, doc file) / hoi xoay luc dang thi
-      max-retries: ${GEMINI_MAX_RETRIES:3}
-      quick-max-retries: ${GEMINI_QUICK_MAX_RETRIES:1}
-      # Cho truoc lan goi lai dau tien (ms), cac lan sau gap doi, toi da 10 giay
-      retry-delay-ms: ${GEMINI_RETRY_DELAY_MS:2000}
+    claude:
+      # Key tao o console.anthropic.com. De trong = tat AI (app van chay, khong hoi xoay / cham bang AI).
+      api-key: ${ANTHROPIC_API_KEY:}
+      model: ${CLAUDE_MODEL:claude-haiku-5-5}
+      # So token toi da model tra loi: viec nang (cham diem, doc file, sinh cau hoi) / hoi xoay luc dang thi
+      max-tokens: ${CLAUDE_MAX_TOKENS:8192}
+      quick-max-tokens: ${CLAUDE_QUICK_MAX_TOKENS:2048}
+      # So lan goi lai khi loi tam thoi (429 / 5xx / 529): viec nang / hoi xoay luc dang thi
+      max-retries: ${CLAUDE_MAX_RETRIES:3}
+      quick-max-retries: ${CLAUDE_QUICK_MAX_RETRIES:1}
+      retry-delay-ms: ${CLAUDE_RETRY_DELAY_MS:2000}
       # Thoi gian toi da cho 1 lan goi AI khi dang thi (ms). Qua thoi gian nay he thong tu chuyen cau hoi tiep theo.
-      read-timeout-ms: ${GEMINI_TIMEOUT_MS:20000}
-      long-read-timeout-ms: ${GEMINI_LONG_TIMEOUT_MS:120000}
-      # Muc "suy nghi" cua dong Gemini 3: low / medium / high (gemini-3.8-flash KHONG nhan minimal, mac dinh medium).
-      # low = tra loi nhanh nhat. De trong = dung mac dinh cua model.
-      thinking-level: ${GEMINI_THINKING_LEVEL:low}
-      thinking-budget: ${GEMINI_THINKING_BUDGET:-1}
+      read-timeout-ms: ${CLAUDE_TIMEOUT_MS:20000}
+      long-read-timeout-ms: ${CLAUDE_LONG_TIMEOUT_MS:120000}
   # Google Cloud Speech-to-Text (STT) + Text-to-Speech (TTS). De trong GOOGLE_SPEECH_CREDENTIALS = tat (app van chay).
   speech:
     credentials-path: ${GOOGLE_SPEECH_CREDENTIALS:}
@@ -92,6 +84,12 @@ app:
     bucket-name: ${GOOGLE_RAG_BUCKET:exam-slides-bucket-2026}
     corpus-id: ${GOOGLE_RAG_CORPUS_ID:6917529027641081856}
     credentials-path: ${GOOGLE_RAG_CREDENTIALS:../rag-key.json}
+  # Noi luu hoc lieu cua chuong:
+  #   local (mac dinh): luu file tren may chay backend + doc chu PDF/PPTX/DOCX, KHONG can Google Cloud
+  #   gcs: Google Cloud Storage + Vertex AI RAG (can rag-key.json o muc rag ben tren)
+  materials:
+    storage: ${MATERIAL_STORAGE:local}
+    local-dir: ${MATERIAL_LOCAL_DIR:uploads/materials}
   viva:
     default-question-count: ${VIVA_DEFAULT_QUESTION_COUNT:3}
   grading:

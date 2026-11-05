@@ -5,6 +5,7 @@ import com.aives.common.exception.ErrorCode;
 import com.aives.common.util.RandomIdGenerator;
 import com.aives.modules.content.dto.ChapterResponse;
 import com.aives.modules.content.dto.CreateChapterRequest;
+import com.aives.modules.content.dto.UpdateChapterRequest;
 import com.aives.modules.content.entity.Chapter;
 import com.aives.modules.content.entity.Course;
 import com.aives.modules.content.repository.ChapterRepository;
@@ -58,6 +59,46 @@ public class ChapterServiceImpl implements ChapterService {
         Chapter saved = chapterRepository.save(chapter);
         log.info("Created new Chapter: id={}, courseId={}, name={}", saved.getId(), course.getId(), saved.getName());
         return toChapterResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public ChapterResponse updateChapter(String courseId, String chapterId, UpdateChapterRequest request) {
+        Chapter chapter = findChapterOfCourse(courseId, chapterId);
+        chapter.setName(request.getName().trim());
+        chapter.setOrderNo(request.getOrderNo() != null ? request.getOrderNo() : chapter.getOrderNo());
+        chapter.setDescription(request.getDescription());
+
+        Chapter saved = chapterRepository.save(chapter);
+        log.info("Updated Chapter: id={}, courseId={}, name={}", saved.getId(), courseId, saved.getName());
+        return toChapterResponse(saved);
+    }
+
+    /** Chi xoa duoc chuong chua co tai lieu va cau hoi. */
+    @Override
+    @Transactional
+    public void deleteChapter(String courseId, String chapterId) {
+        Chapter chapter = findChapterOfCourse(courseId, chapterId);
+
+        long materialCount = materialRepository.countByChapterId(chapterId);
+        long questionCount = questionRepository.countByChapter_Id(chapterId);
+        if (materialCount > 0 || questionCount > 0) {
+            throw new BusinessException(ErrorCode.DATA_CONFLICT,
+                    "Chương đang có " + materialCount + " tài liệu và " + questionCount
+                            + " câu hỏi. Hãy xoá tài liệu và câu hỏi trước khi xoá chương");
+        }
+
+        chapterRepository.delete(chapter);
+        log.info("Deleted Chapter: id={}, courseId={}", chapterId, courseId);
+    }
+
+    private Chapter findChapterOfCourse(String courseId, String chapterId) {
+        Chapter chapter = chapterRepository.findById(chapterId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CHAPTER_NOT_FOUND, "Không tìm thấy chương: " + chapterId));
+        if (!chapter.getCourse().getId().equals(courseId)) {
+            throw new BusinessException(ErrorCode.CHAPTER_NOT_FOUND, "Chương " + chapterId + " không thuộc môn học " + courseId);
+        }
+        return chapter;
     }
 
     private ChapterResponse toChapterResponse(Chapter chapter) {

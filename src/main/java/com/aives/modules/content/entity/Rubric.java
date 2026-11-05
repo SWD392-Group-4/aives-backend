@@ -48,4 +48,11 @@ public class Rubric extends BaseEntity {
     @Builder.Default
     @Column(name = "max_score", nullable = false, precision = 5, scale = 2)
     private BigDecimal maxScore = new BigDecimal("10.00");
+
+    /** Thoi diem giang vien duyet rubric. null = rubric con nhap, chua duoc sinh / duyet cau hoi. */
+    @Column(name = "approved_at")
+    private java.time.LocalDateTime approvedAt;
+
+    @Column(name = "approved_by", length = 20)
+    private String approvedBy;
 }

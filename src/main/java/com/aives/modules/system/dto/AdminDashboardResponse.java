@@ -44,10 +44,10 @@ public class AdminDashboardResponse {
         @Schema(description = "AI đang được kích hoạt hay tắt", example = "true")
         private boolean enabled;
 
-        @Schema(description = "Nhà cung cấp dịch vụ LLM", example = "Google Gemini")
+        @Schema(description = "Nhà cung cấp dịch vụ LLM", example = "Anthropic Claude")
         private String provider;
 
-        @Schema(description = "Tên mô hình đang sử dụng", example = "gemini-3.8-flash")
+        @Schema(description = "Tên mô hình đang sử dụng", example = "claude-haiku-5-5")
         private String model;
 
         @Schema(description = "Trạng thái hoạt động", example = "ACTIVE")

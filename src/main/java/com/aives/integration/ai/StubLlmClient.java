@@ -4,7 +4,7 @@ package com.aives.integration.ai;
  * Strategy Pattern - ConcreteStrategy (Fallback / Offline Implementation)
  *
  * Chiến lược dự phòng khi hệ thống chạy trong môi trường phát triển ngoại tuyến
- * hoặc chưa được cấu hình GEMINI_API_KEY.
+ * hoặc chưa được cấu hình ANTHROPIC_API_KEY.
  *
  * Đặc điểm kiến trúc:
  * - Thay vì làm gián đoạn luồng thực thi của toàn hệ thống, lớp này trả về cờ
@@ -21,6 +21,6 @@ public class StubLlmClient implements LlmClient {
 
     @Override
     public String generateJson(LlmRequest request) {
-        throw new LlmException("Chưa cấu hình GEMINI_API_KEY nên không gọi được AI");
+        throw new LlmException("Chưa cấu hình ANTHROPIC_API_KEY nên không gọi được AI");
     }
 }

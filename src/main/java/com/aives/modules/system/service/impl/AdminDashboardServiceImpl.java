@@ -1,6 +1,6 @@
 package com.aives.modules.system.service.impl;
 
-import com.aives.integration.ai.GeminiProperties;
+import com.aives.integration.ai.ClaudeProperties;
 import com.aives.integration.ai.LlmClient;
 import com.aives.modules.auth.enums.RoleName;
 import com.aives.modules.auth.repository.UserRepository;
@@ -20,7 +20,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final UserRepository userRepository;
     private final VivaExamRepository vivaExamRepository;
     private final LlmClient llmClient;
-    private final GeminiProperties geminiProperties;
+    private final ClaudeProperties claudeProperties;
     private final Clock clock;
 
     @Override
@@ -37,8 +37,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         boolean aiEnabled = llmClient.isEnabled();
         AdminDashboardResponse.AiStatusResponse aiStatus = AdminDashboardResponse.AiStatusResponse.builder()
                 .enabled(aiEnabled)
-                .provider("Google Gemini")
-                .model(geminiProperties.getModel())
+                .provider("Anthropic Claude")
+                .model(claudeProperties.getModel())
                 .status(aiEnabled ? "ACTIVE" : "DISABLED")
                 .build();
 

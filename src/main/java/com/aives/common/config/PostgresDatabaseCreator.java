@@ -34,6 +34,8 @@ import org.springframework.core.env.ConfigurableEnvironment;
 public class PostgresDatabaseCreator implements EnvironmentPostProcessor, Ordered {
 
     static final String INIT_SCRIPT = "db/postgres/00_init_aives.sql";
+    /** Cap nhat cau truc Mon hoc / Chuong / Ngan hang cau hoi. Viet dang IF NOT EXISTS nen chay lai moi lan khoi dong. */
+    static final String MIGRATION_SCRIPT = "db/postgres/01_course_rubric_question_bank.sql";
 
     private static final Pattern POSTGRES_URL =
             Pattern.compile("^jdbc:postgresql://([^/?]+)/([^?/]+)(\\?.*)?$");
@@ -108,31 +110,45 @@ public class PostgresDatabaseCreator implements EnvironmentPostProcessor, Ordere
     private void createTablesIfMissing(String url, String username, String password)
             throws SQLException, IOException {
         try (Connection conn = DriverManager.getConnection(url, username, password)) {
+            boolean hasTables;
             try (Statement st = conn.createStatement();
                  ResultSet rs = st.executeQuery("SELECT to_regclass('public.roles') IS NOT NULL")) {
                 rs.next();
-                if (rs.getBoolean(1)) {
-                    return;
-                }
+                hasTables = rs.getBoolean(1);
             }
-            String script = readInitScript();
-            conn.setAutoCommit(false);
-            try (Statement st = conn.createStatement()) {
-                // Driver PostgreSQL tu tach nhieu cau lenh trong cung mot chuoi
-                st.execute(script);
-                conn.commit();
+            if (!hasTables) {
+                runScript(conn, INIT_SCRIPT);
+                log.info("Da tao bang tu script " + INIT_SCRIPT + ".");
+            }
+            try {
+                runScript(conn, MIGRATION_SCRIPT);
+                log.info("Da cap nhat cau truc bang tu script " + MIGRATION_SCRIPT + ".");
             } catch (SQLException ex) {
-                conn.rollback();
-                throw ex;
+                log.warn("Khong chay duoc script " + MIGRATION_SCRIPT + ": " + ex.getMessage());
             }
-            log.info("Da tao bang tu script " + INIT_SCRIPT + ".");
         }
     }
 
-    private String readInitScript() throws IOException {
-        try (InputStream in = PostgresDatabaseCreator.class.getClassLoader().getResourceAsStream(INIT_SCRIPT)) {
+    private void runScript(Connection conn, String resource) throws SQLException, IOException {
+        String script = readScript(resource);
+        boolean autoCommit = conn.getAutoCommit();
+        conn.setAutoCommit(false);
+        try (Statement st = conn.createStatement()) {
+            // Driver PostgreSQL tu tach nhieu cau lenh trong cung mot chuoi (ke ca khoi DO $$ ... $$)
+            st.execute(script);
+            conn.commit();
+        } catch (SQLException ex) {
+            conn.rollback();
+            throw ex;
+        } finally {
+            conn.setAutoCommit(autoCommit);
+        }
+    }
+
+    private String readScript(String resource) throws IOException {
+        try (InputStream in = PostgresDatabaseCreator.class.getClassLoader().getResourceAsStream(resource)) {
             if (in == null) {
-                throw new IOException("khong tim thay " + INIT_SCRIPT + " trong classpath");
+                throw new IOException("khong tim thay " + resource + " trong classpath");
             }
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }

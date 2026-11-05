@@ -28,6 +28,8 @@ public interface MaterialRepository extends JpaRepository<Material, String> {
 
     long countByChapterId(String chapterId);
 
+    long countByChapterIdIn(java.util.Collection<String> chapterIds);
+
     @Query("SELECT m FROM Material m WHERE "
             + "(:lecturerId IS NULL OR m.lecturerId = :lecturerId) AND "
             + "(:lessonId IS NULL OR m.lessonId = :lessonId) AND "

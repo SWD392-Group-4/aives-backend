@@ -23,7 +23,7 @@ public class InterviewStateResponse {
 
     private InterviewStatus status;
 
-    // false = backend chua co GEMINI_API_KEY nen khong co cau hoi xoay
+    // false = backend chua co ANTHROPIC_API_KEY nen khong co cau hoi xoay
     private boolean aiEnabled;
 
     // true = lan quyet dinh gan nhat AI bi loi (het quota, mat mang...) nen he thong tu chuyen cau tiep theo

@@ -73,6 +73,11 @@ public class Material {
     @Column(name = "error_message", length = Length.LONG32)
     private String errorMessage;
 
+    /** Chu doc duoc tu file (che do luu local), dua vao prompt khi AI sinh cau hoi. */
+    @Nationalized
+    @Column(name = "content_text", length = Length.LONG32)
+    private String contentText;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
